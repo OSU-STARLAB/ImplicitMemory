@@ -26,7 +26,7 @@ import json
 # ------------------------------------------------------------------------------
 
 
-class AugmentedMemoryConvTransformerEncoder_layer_mem(ConvTransformerEncoder):
+class AugmentedMemoryConvTransformerEncoder(ConvTransformerEncoder):
     def __init__(self, args):
         super().__init__(args)
 
@@ -101,7 +101,6 @@ class AugmentedMemoryConvTransformerEncoder_layer_mem(ConvTransformerEncoder):
         if self.max_memory_size != 0:
             segment = x
             x = torch.cat(memory + [x], dim=0)
-            memory = self.update_mem_banks(memory, segment)
             output_seq_len += len(memory)*self.mem_bank_size
             max_seq_len += 4*len(memory)*self.mem_bank_size
             src_lengths += 4*len(memory)*self.mem_bank_size
@@ -157,6 +156,9 @@ class AugmentedMemoryConvTransformerEncoder_layer_mem(ConvTransformerEncoder):
                 .sum(dim=1, keepdim=True)
                 .long()
             )
+        if self.max_memory_size != 0:
+            memory = self.update_mem_banks(memory, segment)
+            
         return states[-1]["encoder_states"], lengths, states, memory
 
 
@@ -326,7 +328,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 # ------------------------------------------------------------------------------
 #   SequenceEncoder
 # ------------------------------------------------------------------------------
-class SequenceEncoder_layer_mem(FairseqEncoder):
+class SequenceEncoder(FairseqEncoder):
     """
     SequenceEncoder encodes sequences.
 
@@ -427,7 +429,7 @@ class SequenceEncoder_layer_mem(FairseqEncoder):
 # ------------------------------------------------------------------------------
 #   Augmented memory model decorator
 # ------------------------------------------------------------------------------
-def augmented_memory_layer_mem(klass):
+def augmented_memory(klass):
     class StreamSeq2SeqModel(klass):
         @staticmethod
         def add_args(parser):
