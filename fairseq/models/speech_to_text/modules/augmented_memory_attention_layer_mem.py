@@ -52,34 +52,29 @@ class AugmentedMemoryConvTransformerEncoder_layer_mem(ConvTransformerEncoder):
 
         self.mem_bank_size = getattr(args, "mem_bank_size")
         self.max_memory_size = getattr(args, "max_memory_size")
+        self.increase_context = getattr(args, "increase_context")
         self.pool = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
-
-        self.tanh_on_mem = False
-        if self.tanh_on_mem:
-            self.squash_mem = torch.tanh
-            self.nonlinear_squash_mem = True
-        else:
-            self.squash_mem = lambda x: x
-            self.nonlinear_squash_mem = False
+        
 
     def stride(self):
         # Hard coded here. Should infer from convs in future
         stride = 4
         return stride
 
-    def update_mem_banks(self, memory, input):
-        _, _, length, _ = input.size()
+    def update_mem_banks(self, memory, segment):
+        length, _, _ = segment.size()
         if self.increase_context:
-            segment = input[self.mem_bank_size*len(memory):length]
+            segment = segment[0:length]
         else:
-            segment = input[self.mem_bank_size*len(memory)+self.left_context_after_stride:length-self.right_context_after_stride]
-        
-        next_m = self.pool(segment.transpose(2,3)).transpose(2,3)
-        next_m = self.squash_mem(next_m)
+            segment = segment[self.left_context_after_stride:length-self.right_context_after_stride]
+
+        segment = segment.transpose(0,2)
+        next_m = self.pool(segment)
+        next_m = next_m.transpose(0,2)
         memory.append(next_m) 
 
         if self.max_memory_size > -1 and len(memory) > self.max_memory_size:
-            memory = memory.pop(0)
+            memory.pop(0)
         return memory
         
     def forward(self, src_tokens, src_lengths, states=None, memory=None):
@@ -95,18 +90,22 @@ class AugmentedMemoryConvTransformerEncoder_layer_mem(ConvTransformerEncoder):
             .transpose(1, 2)
             .contiguous()
         )
-        #Insert Memory bank aquisition and insertion here
+
         if memory is None:
             memory = []
-       
+
         x = self.conv(x)
-
-        if self.max_memory_size != 0:
-            x = torch.cat(memory + [input], dim=2)
-            memory = self.update_mem_banks(memory, x)
-
         bsz, _, output_seq_len, _ = x.size()
         x = x.transpose(1, 2).transpose(0, 1).contiguous().view(output_seq_len, bsz, -1)
+
+        if self.max_memory_size != 0:
+            segment = x
+            x = torch.cat(memory + [x], dim=0)
+            memory = self.update_mem_banks(memory, segment)
+            output_seq_len += len(memory)*self.mem_bank_size
+            max_seq_len += 4*len(memory)*self.mem_bank_size
+            src_lengths += 4*len(memory)*self.mem_bank_size
+
         x = self.out(x)
         x = self.embed_scale * x
 
@@ -136,7 +135,7 @@ class AugmentedMemoryConvTransformerEncoder_layer_mem(ConvTransformerEncoder):
             # (self.left_size + self.segment_size + self.right_size)
             # / self.stride, num_heads, dim
             # TODO: Consider mask here 
-            x = layer(x, states[i], i)
+            x = layer(x)
             if self.right_context_after_stride != 0:
                 states[i]["encoder_states"] = x[len(memory)*self.mem_bank_size+self.left_context_after_stride : -self.right_context_after_stride]
             else:
@@ -206,7 +205,6 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             self_attention=True,
             q_noise=self.quant_noise,
             qn_block_size=self.quant_noise_block_size,
-            increase_context=args.increase_context,
         )
 
 
