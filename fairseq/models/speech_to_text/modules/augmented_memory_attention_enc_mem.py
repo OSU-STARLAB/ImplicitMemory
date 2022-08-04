@@ -44,6 +44,14 @@ class AugmentedMemoryConvTransformerEncoder_enc_mem(ConvTransformerEncoder):
   
         self.pool = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
 
+        self.tanh_on_mem = True
+        if self.tanh_on_mem:
+            self.squash_mem = torch.tanh
+            self.nonlinear_squash_mem = True
+        else:
+            self.squash_mem = lambda x: x
+            self.nonlinear_squash_mem = False
+
         # Layer sharing code
         encoder_weight_share_list = getattr(args, "share_encoder_ffn_attn_layer", None)
         if encoder_weight_share_list is None:
@@ -78,6 +86,7 @@ class AugmentedMemoryConvTransformerEncoder_enc_mem(ConvTransformerEncoder):
         next_m = self.pool(next_m)
         next_m = next_m.transpose(0,2)
 
+        next_m = self.squash_mem(next_m)
         state["memory_banks"].append(next_m) 
         
         return state
