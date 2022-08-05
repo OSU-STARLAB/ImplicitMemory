@@ -107,6 +107,9 @@ def fixed_pooling_monotonic_attention(monotonic_attention):
                 tgt_len = query.size(0)
                 batch_size = query.size(1)
 
+                print("Key Size: ", key.transpose(0, 2).size())
+                print("Key: ", key.transpose(0, 2))
+                
                 key_pool = self.pooling_layer(key.transpose(0, 2)).transpose(0, 2)
 
                 if key_padding_mask is not None:

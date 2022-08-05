@@ -129,7 +129,7 @@ def augmented_memory_convtransformer_espnet(args):
 class AugmentedMemoryConvTransformerModel_layer_mem(SimulConvTransformerModel):
     @classmethod
     def build_encoder(cls, args):
-        encoder = SequenceEncoder(args, AugmentedMemoryConvTransformerEncoder_layer_mem(args))
+        encoder = SequenceEncoder_layer_mem(args, AugmentedMemoryConvTransformerEncoder_layer_mem(args))
 
         if getattr(args, "load_pretrained_encoder_from", None) is not None:
             encoder = checkpoint_utils.load_pretrained_component_from_model(
