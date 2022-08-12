@@ -159,16 +159,7 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
         self.pool = torch.nn.AdaptiveAvgPool1d(self.sum_query_size)
 
-    def forward(self, x, state, layer_num):
-
-        length, batch_size, x_dim = x.size()
-
-        residual = x
-
-        if self.normalize_before:
-            x = self.self_attn_layer_norm(x)
-
-        # TODO reseach new sum_query method
+    def compute_sum_query(self, x, length, batch_size, x_dim):
         if self.increase_context:
             seg_start = 0
             seg_end = length
@@ -184,7 +175,19 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             summarization_query = summarization_query.transpose(0,2)
         else:
             summarization_query = x.new_zeros(self.sum_query_size, batch_size, x_dim)
+        return summarization_query
 
+    def forward(self, x, state, layer_num):
+
+        length, batch_size, x_dim = x.size()
+
+        residual = x
+
+        if self.normalize_before:
+            x = self.self_attn_layer_norm(x)
+
+        # TODO reseach new sum_query method
+        summarization_query = self.compute_sum_query(x, length, batch_size, x_dim)
         x = torch.cat([x, summarization_query], dim=0)
 
         x = self.self_attn(input_and_summary=x, state=state, layer_num=layer_num)
@@ -423,28 +426,26 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             modified attention_weight with [B*num_heads, -1, :mem_size] = -inf
         """
         attention_weight[:, -self.sum_query_size:, :mem_size] = float("-inf")
-        _, _, length = attention_weight.size()
-        if length - mem_size < self.segment_size:
-            return attention_weight
         if not self.increase_context:
+            _, _, length = attention_weight.size()
+            if length - mem_size < self.segment_size:
+                return attention_weight
             attention_weight[:, -self.sum_query_size:, :self.left_context+mem_size] = float("-inf")
             attention_weight[:, -self.sum_query_size:, length-self.right_context:] = float("-inf")
             length = length - (self.left_context + self.right_context + mem_size)
-        else:
-            length = length - mem_size
-        seg_size = length // self.sum_query_size
-        curr_pos_q = self.sum_query_size
-        curr_pos_k = self.left_context + mem_size
-        while curr_pos_q >= 1:
-            if curr_pos_q == 1:
-                attention_weight[:, -curr_pos_q, :curr_pos_k] = float("-inf")
-                if self.right_context != 0:
-                    attention_weight[:, -curr_pos_q, -self.right_context:] = float("-inf")
-            else:
-                attention_weight[:, -curr_pos_q, :curr_pos_k] = float("-inf")
-                attention_weight[:, -curr_pos_q, curr_pos_k+seg_size:] = float("-inf")
-            curr_pos_k += seg_size
-            curr_pos_q -= 1
+            seg_size = length // self.sum_query_size
+            curr_pos_q = self.sum_query_size
+            curr_pos_k = self.left_context + mem_size
+            while curr_pos_q >= 1:
+                if curr_pos_q == 1:
+                    attention_weight[:, -curr_pos_q, :curr_pos_k] = float("-inf")
+                    if self.right_context != 0:
+                        attention_weight[:, -curr_pos_q, -self.right_context:] = float("-inf")
+                else:
+                    attention_weight[:, -curr_pos_q, :curr_pos_k] = float("-inf")
+                    attention_weight[:, -curr_pos_q, curr_pos_k+seg_size:] = float("-inf")
+                curr_pos_k += seg_size
+                curr_pos_q -= 1
         
         return attention_weight
 
@@ -595,6 +596,7 @@ def augmented_memory_query_size(klass):
                 default=None,
                 help=":The list of memory bank sharing layers",
             )
+            
 
     StreamSeq2SeqModel.__name__ = klass.__name__
     return StreamSeq2SeqModel

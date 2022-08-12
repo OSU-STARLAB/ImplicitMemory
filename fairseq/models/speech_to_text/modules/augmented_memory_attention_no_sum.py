@@ -155,7 +155,41 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
         self.right_context = args.right_context // args.encoder_stride
 
         self.share_mem_bank_layers = args.share_mem_bank_layers
+        self.mem_bank_after = args.mem_bank_after
 
+        self.tanh_on_mem = args.tanh_on_mem
+        if self.tanh_on_mem:
+            self.squash_mem = torch.tanh
+            self.nonlinear_squash_mem = True
+        else:
+            self.squash_mem = lambda x: x
+            self.nonlinear_squash_mem = False
+
+    def update_mem_banks(self, state, input, layer_num):
+        length, _, _ = input.size()
+        if self.increase_context:
+            segment = input[0:length]
+        else:
+            segment = input[self.left_context:length-self.right_context]
+        
+        segment = segment.transpose(0,2)
+        next_m = self.pool(segment)
+        next_m = next_m.transpose(0,2)
+
+        if self.share_mem_bank_layers is not None:
+          if not any(layer_num in layer for layer in self.share_mem_bank_layers):
+            next_m = self.squash_mem(next_m)
+            state["memory_banks"].append(next_m)
+          else:
+            for pairs in self.share_mem_bank_layers:
+                if layer_num == pairs[0]:
+                    next_m = self.squash_mem(next_m)
+                    state["memory_banks"].append(next_m)        
+        else:
+            next_m = self.squash_mem(next_m)
+            state["memory_banks"].append(next_m) 
+        return state
+        
     def forward(self, x, state, layer_num):
 
         residual = x
@@ -184,6 +218,9 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
         if not self.normalize_before:
             x = self.final_layer_norm(x)
 
+        if self.max_memory_size != 0 and self.mem_bank_after:
+            state = self.update_mem_banks(state, x, layer_num)
+
         return x
 
     def build_self_attention(self, embed_dim, args):
@@ -194,13 +231,14 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             self_attention=True,
             q_noise=self.quant_noise,
             qn_block_size=self.quant_noise_block_size,
-            tanh_on_mem=True,
+            tanh_on_mem=args.tanh_on_mem,
             max_memory_size=args.max_memory_size,
             share_mem_bank_layers=args.share_mem_bank_layers,
             mem_bank_size=args.mem_bank_size,
             left_context=args.left_context // args.encoder_stride,
             right_context=args.right_context // args.encoder_stride,
             increase_context=args.increase_context,
+            mem_bank_after=args.mem_bank_after,
         )
 
 
@@ -238,6 +276,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         left_context=0,
         right_context=0,
         increase_context=False,
+        mem_bank_after=False,
     ):
         super().__init__(
             embed_dim,
@@ -277,6 +316,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         
         self.mem_bank_size = mem_bank_size
         self.pool = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
+        self.mem_bank_after = mem_bank_after
 
     def update_mem_banks(self, state, input, layer_num):
         length, _, _ = input.size()
@@ -378,7 +418,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         
         output = self.out_proj(attention)
         
-        if self.max_memory_size != 0:
+        if self.max_memory_size != 0 and not self.mem_bank_after:
             state = self.update_mem_banks(state, input, layer_num)
 
         return output
@@ -529,6 +569,18 @@ def augmented_memory_no_sum(klass):
                 type=int,
                 default=1,
                 help="Size of mem_bank",
+            )
+            parser.add_argument(
+                "--mem-bank-after",
+                action="store_true",
+                default=False,
+                help="if True, average after attention",
+            )
+            parser.add_argument(
+                "--tanh-on-mem",
+                action="store_true",
+                default=True,
+                help="if True, squash memory banks",
             )
 
     StreamSeq2SeqModel.__name__ = klass.__name__
