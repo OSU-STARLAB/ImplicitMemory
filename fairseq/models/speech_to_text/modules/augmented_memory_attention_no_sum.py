@@ -157,6 +157,10 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
         self.share_mem_bank_layers = args.share_mem_bank_layers
         self.mem_bank_after = args.mem_bank_after
 
+        self.mem_bank_size = args.mem_bank_size
+        self.pool = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
+        self.max_memory_size = args.max_memory_size
+        self.increase_context = args.increase_context
         self.tanh_on_mem = args.tanh_on_mem
         if self.tanh_on_mem:
             self.squash_mem = torch.tanh
