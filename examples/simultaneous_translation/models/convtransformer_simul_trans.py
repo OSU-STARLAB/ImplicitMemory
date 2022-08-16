@@ -40,6 +40,11 @@ from fairseq.models.speech_to_text.modules.augmented_memory_attention_no_sum imp
     SequenceEncoder_no_sum,
     AugmentedMemoryConvTransformerEncoder_no_sum,
 )
+from fairseq.models.speech_to_text.modules.augmented_memory_attention_conv import (
+    augmented_memory_conv,
+    SequenceEncoder_conv,
+    AugmentedMemoryConvTransformerEncoder_conv,
+)
 
 from torch import nn, Tensor
 from typing import Dict, List
@@ -123,6 +128,27 @@ class AugmentedMemoryConvTransformerModel(SimulConvTransformerModel):
 def augmented_memory_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
+#Conv Augmented Memory Transformer
+@register_model("convtransformer_augmented_memory_conv")
+@augmented_memory_conv
+class AugmentedMemoryConvTransformerModel_conv(SimulConvTransformerModel):
+    @classmethod
+    def build_encoder(cls, args):
+        encoder = SequenceEncoder_conv(args, AugmentedMemoryConvTransformerEncoder_conv(args))
+
+        if getattr(args, "load_pretrained_encoder_from", None) is not None:
+            encoder = checkpoint_utils.load_pretrained_component_from_model(
+                component=encoder, checkpoint=args.load_pretrained_encoder_from
+            )
+
+        return encoder
+
+
+@register_model_architecture(
+    "convtransformer_augmented_memory_conv", "convtransformer_augmented_memory_conv"
+)
+def augmented_memory_conv_convtransformer_espnet(args):
+    convtransformer_espnet(args)
 #Layer_Mem Augment Memory Transformer
 @register_model("convtransformer_augmented_memory_layer_mem")
 @augmented_memory_layer_mem

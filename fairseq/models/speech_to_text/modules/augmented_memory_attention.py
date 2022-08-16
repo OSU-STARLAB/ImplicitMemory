@@ -104,9 +104,8 @@ class AugmentedMemoryConvTransformerEncoder(ConvTransformerEncoder):
             input_lengths, batch_first=True
         )
 
-        positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
-
-        x += positions
+        #positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
+        #x += positions
 
         x = F.dropout(x, p=self.dropout, training=self.training)
 
