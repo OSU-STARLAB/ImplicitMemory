@@ -51,7 +51,6 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
                 self.transformer_layers.append(AugmentedMemoryTransformerEncoderLayer(args))
 
         self.share_mem_bank_layers = args.share_mem_bank_layers
-        self.conv_before = args.conv_before
 
     def stride(self):
         # Hard coded here. Should infer from convs in future
@@ -454,7 +453,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 # ------------------------------------------------------------------------------
 #   SequenceEncoder
 # ------------------------------------------------------------------------------
-class SequenceEncoder_no_sum(ConvTransformerEncoder):
+class SequenceEncoder_no_sum(FairseqEncoder):
     """
     SequenceEncoder encodes sequences.
 
@@ -608,12 +607,6 @@ def augmented_memory_no_sum(klass):
                 action="store_true",
                 default=True,
                 help="if True, squash memory banks",
-            )
-            parser.add_argument(
-                "--conv-before",
-                action="store_true",
-                default=False,
-                help="if True, average after attention",
             )
             parser.add_argument(
                 "--shrink-mem-bank",
