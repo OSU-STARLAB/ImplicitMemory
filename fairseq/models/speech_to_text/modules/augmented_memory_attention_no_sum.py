@@ -20,7 +20,7 @@ from fairseq.models.speech_to_text.utils import (
 from fairseq.modules import MultiheadAttention, TransformerEncoderLayer
 from torch import nn, Tensor
 import json
-
+from fairseq.data.data_utils import lengths_to_padding_mask
 # ------------------------------------------------------------------------------
 #   AugmentedMemoryConvTransformerEncoder
 # ------------------------------------------------------------------------------
@@ -78,34 +78,40 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
         :return: position embedded tensor and mask
         :rtype Tuple[torch.Tensor, torch.Tensor]:
         """
-        bsz, max_seq_len, _ = src_tokens.size()
-        x = (
-            src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
-            .transpose(1, 2)
-            .contiguous()
-        )
-        x = self.conv(x)
-        bsz, _, output_seq_len, _ = x.size()
-        x = x.transpose(1, 2).transpose(0, 1).contiguous().view(output_seq_len, bsz, -1)
-        x = self.out(x)
-        x = self.embed_scale * x
+        if not self.conv_before:
+            bsz, max_seq_len, _ = src_tokens.size()
+            x = (
+                src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
+                .transpose(1, 2)
+                .contiguous()
+            )
+            x = self.conv(x)
+            bsz, _, output_seq_len, _ = x.size()
+            x = x.transpose(1, 2).transpose(0, 1).contiguous().view(output_seq_len, bsz, -1)
+            x = self.out(x)
+            x = self.embed_scale * x
 
-        subsampling_factor = max_seq_len * 1.0 / output_seq_len
+            subsampling_factor = max_seq_len * 1.0 / output_seq_len
 
-        input_lengths = torch.min(
-            (src_lengths.float() / subsampling_factor).ceil().long(),
-            x.size(0) * src_lengths.new_ones([src_lengths.size(0)]).long(),
-        )
+            input_lengths = torch.min(
+                (src_lengths.float() / subsampling_factor).ceil().long(),
+                x.size(0) * src_lengths.new_ones([src_lengths.size(0)]).long(),
+            )
 
-        encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
-            input_lengths, batch_first=True
-        )
+            encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
+                input_lengths, batch_first=True
+            )
 
-        positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
+            positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
 
-        x += positions
+            x += positions
 
-        x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.dropout(x, p=self.dropout, training=self.training)
+        else:
+            x = src_tokens
+            encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
+                src_lengths, batch_first=True
+            )
 
         # State to store memory banks etc.
         states = self.initialize_states(states)
@@ -240,6 +246,9 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             right_context=args.right_context // args.encoder_stride,
             increase_context=args.increase_context,
             mem_bank_after=args.mem_bank_after,
+            shrink_mem_bank=args.shrink_mem_bank,
+            shrink_depth=args.shrink_depth,
+            shrink_factor=args.shrink_factor
         )
 
 
@@ -278,6 +287,9 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         right_context=0,
         increase_context=False,
         mem_bank_after=False,
+        shrink_mem_bank=False,
+        shrink_depth=3,
+        shrink_factor=2,
     ):
         super().__init__(
             embed_dim,
@@ -319,6 +331,12 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         self.pool = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
         self.mem_bank_after = mem_bank_after
 
+        self.shrink_mem_bank = shrink_mem_bank
+        if self.shrink_mem_bank:
+            self.shrink_factor = shrink_factor
+            self.pooltwo = torch.nn.AdaptiveAvgPool1d(self.shrink_factor)
+            self.shrink_depth = shrink_depth
+
     def update_mem_banks(self, state, input, layer_num):
         length, _, _ = input.size()
         if self.increase_context:
@@ -344,6 +362,13 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             state["memory_banks"].append(next_m) 
         return state
 
+    def shrink_banks(self, memory):
+        num_banks = len(memory)
+        if num_banks > self.shrink_depth:
+            self.pooltwo(memory[self.shrink_depth])
+        length = self.shrink_depth*self.mem_bank_size + (num_banks - self.shrink_depth)*self.shrink_factor
+        return memory, length 
+
     def forward(self, input, state, layer_num):
         """
         input: Encoder states of current segment with left or right context,
@@ -359,6 +384,13 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         if self.max_memory_size > -1 and len(memory) > self.max_memory_size:
             memory = memory[-self.max_memory_size :]
             state["memory_banks"] = memory
+        
+        if self.shrink_mem_bank:
+            mem_bank_len = 0
+            memory, mem_bank_len = self.shrink_banks(memory)
+            state["memory_banks"] = memory
+        else:
+            mem_bank_len = len(memory)*self.mem_bank_size
 
         memory_and_input = torch.cat(memory + [input], dim=0)
         input_query = input
@@ -393,7 +425,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         assert list(attention_weights.shape) == [
             batch_size * self.num_heads,
             length,
-            length + self.mem_bank_size*len(memory),
+            length + mem_bank_len,
         ]
 
         attention_weights = torch.nn.functional.softmax(
@@ -428,7 +460,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 # ------------------------------------------------------------------------------
 #   SequenceEncoder
 # ------------------------------------------------------------------------------
-class SequenceEncoder_no_sum(FairseqEncoder):
+class SequenceEncoder_no_sum(ConvTransformerEncoder):
     """
     SequenceEncoder encodes sequences.
 
@@ -450,7 +482,7 @@ class SequenceEncoder_no_sum(FairseqEncoder):
     """
 
     def __init__(self, args, module):
-        super().__init__(None)
+        super().__init__(args)
 
         self.module = module
         self.input_time_axis = 1
@@ -458,6 +490,8 @@ class SequenceEncoder_no_sum(FairseqEncoder):
         self.segment_size = args.segment_size
         self.left_context = args.left_context
         self.right_context = args.right_context
+        self.conv_before = args.conv_before
+        self.encoder_stride = 4
 
     def forward(
         self,
@@ -465,15 +499,53 @@ class SequenceEncoder_no_sum(FairseqEncoder):
         src_lengths: Tensor,
         states=None,
     ):
+        if self.conv_before:
+            self.input_time_axis = 0
+            self.segment_size = self.segment_size // self.encoder_stride
+            self.left_context = self.left_context // self.encoder_stride
+            self.right_context = self.right_context //self.encoder_stride 
+            bsz, max_seq_len, _ = src_tokens.size()
+            x = (
+                src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
+                .transpose(1, 2)
+                .contiguous()
+            )
+            x = self.conv(x)
+            bsz, _, output_seq_len, _ = x.size()
+            x = x.transpose(1, 2).transpose(0, 1).contiguous().view(output_seq_len, bsz, -1)
+            x = self.out(x)
+            x = self.embed_scale * x
 
-        seg_src_tokens_lengths = sequence_to_segments(
-            sequence=src_tokens,
-            time_axis=self.input_time_axis,
-            lengths=src_lengths,
-            segment_size=self.segment_size,
-            extra_left_context=self.left_context,
-            extra_right_context=self.right_context,
-        )
+            subsampling_factor = int(max_seq_len * 1.0 / output_seq_len + 0.5)
+            input_len_0 = (src_lengths.float() / subsampling_factor).ceil().long()
+            input_len_1 = x.size(0) * torch.ones([src_lengths.size(0)]).long().to(
+                input_len_0.device
+            )
+            input_lengths = torch.min(input_len_0, input_len_1)
+
+            encoder_padding_mask = lengths_to_padding_mask(input_lengths)
+
+            positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
+            x += positions
+            x = F.dropout(x, p=self.dropout, training=self.training)
+
+            seg_src_tokens_lengths = sequence_to_segments(
+                sequence=x,
+                time_axis=self.input_time_axis,
+                lengths=input_lengths,
+                segment_size=self.segment_size,
+                extra_left_context=self.left_context,
+                extra_right_context=self.right_context,
+            )
+        else:
+            seg_src_tokens_lengths = sequence_to_segments(
+                sequence=src_tokens,
+                time_axis=self.input_time_axis,
+                lengths=src_lengths,
+                segment_size=self.segment_size,
+                extra_left_context=self.left_context,
+                extra_right_context=self.right_context,
+            )
 
         seg_encoder_states_lengths: List[Tuple[Tensor, Tensor]] = []
 
@@ -589,6 +661,26 @@ def augmented_memory_no_sum(klass):
                 default=False,
                 help="if True, average after attention",
             )
+            parser.add_argument(
+                "--shrink-mem-bank",
+                action="store_true",
+                default=False,
+                help="if True, average after attention",
+            )
+            parser.add_argument(
+                "--shrink-factor",
+                type=int,
+                default=1,
+                help="Size of mem_bank",
+            )
+            parser.add_argument(
+                "--shrink-depth",
+                type=int,
+                default=1,
+                help="Size of mem_bank",
+            )
+
+
 
     StreamSeq2SeqModel.__name__ = klass.__name__
     return StreamSeq2SeqModel
