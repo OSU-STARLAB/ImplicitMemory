@@ -78,40 +78,34 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
         :return: position embedded tensor and mask
         :rtype Tuple[torch.Tensor, torch.Tensor]:
         """
-        if not self.conv_before:
-            bsz, max_seq_len, _ = src_tokens.size()
-            x = (
-                src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
-                .transpose(1, 2)
-                .contiguous()
-            )
-            x = self.conv(x)
-            bsz, _, output_seq_len, _ = x.size()
-            x = x.transpose(1, 2).transpose(0, 1).contiguous().view(output_seq_len, bsz, -1)
-            x = self.out(x)
-            x = self.embed_scale * x
+        bsz, max_seq_len, _ = src_tokens.size()
+        x = (
+            src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
+            .transpose(1, 2)
+            .contiguous()
+        )
+        x = self.conv(x)
+        bsz, _, output_seq_len, _ = x.size()
+        x = x.transpose(1, 2).transpose(0, 1).contiguous().view(output_seq_len, bsz, -1)
+        x = self.out(x)
+        x = self.embed_scale * x
 
-            subsampling_factor = max_seq_len * 1.0 / output_seq_len
+        subsampling_factor = max_seq_len * 1.0 / output_seq_len
 
-            input_lengths = torch.min(
-                (src_lengths.float() / subsampling_factor).ceil().long(),
-                x.size(0) * src_lengths.new_ones([src_lengths.size(0)]).long(),
-            )
+        input_lengths = torch.min(
+            (src_lengths.float() / subsampling_factor).ceil().long(),
+            x.size(0) * src_lengths.new_ones([src_lengths.size(0)]).long(),
+        )
 
-            encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
-                input_lengths, batch_first=True
-            )
+        encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
+            input_lengths, batch_first=True
+        )
 
-            positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
+        positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
 
-            x += positions
+        x += positions
 
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        else:
-            x = src_tokens
-            encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
-                src_lengths, batch_first=True
-            )
+        x = F.dropout(x, p=self.dropout, training=self.training)
 
         # State to store memory banks etc.
         states = self.initialize_states(states)
@@ -490,8 +484,6 @@ class SequenceEncoder_no_sum(ConvTransformerEncoder):
         self.segment_size = args.segment_size
         self.left_context = args.left_context
         self.right_context = args.right_context
-        self.conv_before = args.conv_before
-        self.encoder_stride = 4
 
     def forward(
         self,
@@ -499,53 +491,15 @@ class SequenceEncoder_no_sum(ConvTransformerEncoder):
         src_lengths: Tensor,
         states=None,
     ):
-        if self.conv_before:
-            self.input_time_axis = 0
-            self.segment_size = self.segment_size // self.encoder_stride
-            self.left_context = self.left_context // self.encoder_stride
-            self.right_context = self.right_context //self.encoder_stride 
-            bsz, max_seq_len, _ = src_tokens.size()
-            x = (
-                src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
-                .transpose(1, 2)
-                .contiguous()
-            )
-            x = self.conv(x)
-            bsz, _, output_seq_len, _ = x.size()
-            x = x.transpose(1, 2).transpose(0, 1).contiguous().view(output_seq_len, bsz, -1)
-            x = self.out(x)
-            x = self.embed_scale * x
-
-            subsampling_factor = int(max_seq_len * 1.0 / output_seq_len + 0.5)
-            input_len_0 = (src_lengths.float() / subsampling_factor).ceil().long()
-            input_len_1 = x.size(0) * torch.ones([src_lengths.size(0)]).long().to(
-                input_len_0.device
-            )
-            input_lengths = torch.min(input_len_0, input_len_1)
-
-            encoder_padding_mask = lengths_to_padding_mask(input_lengths)
-
-            positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
-            x += positions
-            x = F.dropout(x, p=self.dropout, training=self.training)
-
-            seg_src_tokens_lengths = sequence_to_segments(
-                sequence=x,
-                time_axis=self.input_time_axis,
-                lengths=input_lengths,
-                segment_size=self.segment_size,
-                extra_left_context=self.left_context,
-                extra_right_context=self.right_context,
-            )
-        else:
-            seg_src_tokens_lengths = sequence_to_segments(
-                sequence=src_tokens,
-                time_axis=self.input_time_axis,
-                lengths=src_lengths,
-                segment_size=self.segment_size,
-                extra_left_context=self.left_context,
-                extra_right_context=self.right_context,
-            )
+    
+        seg_src_tokens_lengths = sequence_to_segments(
+            sequence=src_tokens,
+            time_axis=self.input_time_axis,
+            lengths=src_lengths,
+            segment_size=self.segment_size,
+            extra_left_context=self.left_context,
+            extra_right_context=self.right_context,
+        )
 
         seg_encoder_states_lengths: List[Tuple[Tensor, Tensor]] = []
 
