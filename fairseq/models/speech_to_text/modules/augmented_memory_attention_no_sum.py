@@ -3,6 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from tokenize import blank_re
 from typing import Tuple, List
 
 import torch
@@ -20,11 +21,30 @@ from fairseq.models.speech_to_text.utils import (
 from fairseq.modules import MultiheadAttention, TransformerEncoderLayer
 from torch import nn, Tensor
 import json
-from fairseq.data.data_utils import lengths_to_padding_mask
+
 # ------------------------------------------------------------------------------
 #   AugmentedMemoryConvTransformerEncoder
 # ------------------------------------------------------------------------------
 
+
+class RelativePositionEmbedding(nn.Module):
+    """
+    Implementation according to https://arxiv.org/abs/1803.02155
+    """
+
+    def __init__(self, head_dim, max_position, norm_init=True):
+        super().__init__()
+        self.head_dim = head_dim
+        self.max_position = max_position
+        self.embeddings = nn.Parameter(torch.Tensor(max_position * 2 + 1, head_dim))
+        if norm_init:
+            nn.init.xavier_normal_(self.embeddings)
+        else:
+            nn.init.xavier_uniform_(self.embeddings)
+
+    def forward(self, input: Tensor):
+        output = nn.functional.embedding(input.long(), self.embeddings)
+        return output
 
 class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
     def __init__(self, args):
@@ -51,6 +71,12 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
                 self.transformer_layers.append(AugmentedMemoryTransformerEncoderLayer(args))
 
         self.share_mem_bank_layers = args.share_mem_bank_layers
+        self.max_relative_position = args.max_relative_position
+        self.mem_bank_size = args.mem_bank_size
+        self.shrink_mem_bank = args.shrink_mem_bank
+        if self.shrink_mem_bank:
+            self.shrink_depth = args.shrink_depth
+            self.shrink_factor = args.shrink_factor
 
     def stride(self):
         # Hard coded here. Should infer from convs in future
@@ -65,10 +91,36 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
                 # Initializes Memory banks
                 rows = len(self.share_mem_bank_layers)
                 for i in range(rows):
-                    cols = len(self.share_mem_bank_layers[i]);
+                    cols = len(self.share_mem_bank_layers[i])
                     for j in range(cols):
                         states[self.share_mem_bank_layers[i][j]]["memory_banks"] = states[self.share_mem_bank_layers[i][0]]["memory_banks"]
         return states
+    def get_relative_position(
+        self,
+        input,
+        mem_size: int,
+    ):
+
+        seq_len, bsz, x_dim = input.shape
+
+        query_ranges = torch.arange(0, seq_len)
+        key_ranges = torch.arange(-mem_size, seq_len)
+        
+        distance = key_ranges[None, :] - query_ranges[:, None] 
+        distance_clamp = (
+            torch.clamp(distance, -self.max_relative_position, self.max_relative_position)
+            + self.max_relative_position
+        )
+        distance_clamp = distance_clamp.to(input.device).long().detach()
+        return distance_clamp
+
+    def get_membank_len(self, memory):
+        num_banks = len(memory)
+        if self.shrink_mem_bank and num_banks > self.shrink_depth:
+            length = self.shrink_depth*self.mem_bank_size + (num_banks - self.shrink_depth)*self.shrink_factor
+        else:
+            length = num_banks*self.mem_bank_size
+        return length 
 
     def forward(self, src_tokens, src_lengths, states=None):
         """Encode input sequence.
@@ -99,23 +151,27 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
         encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
             input_lengths, batch_first=True
         )
-
-        positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
-
-        x += positions
+        
+        if self.max_relative_position <= 0:
+            positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
+            x += positions
 
         x = F.dropout(x, p=self.dropout, training=self.training)
 
         # State to store memory banks etc.
         states = self.initialize_states(states)
-        #print("states after initialize_states: ", states)
+        if self.max_relative_position > 0:
+            mem_bank_len = self.get_membank_len(states[0]["memory_banks"])
+            rpe = self.get_relative_position(x, mem_bank_len)
+        else:
+            rpe = None
 
         for i, layer in enumerate(self.transformer_layers):
             # x size:
             # (self.left_size + self.segment_size + self.right_size)
             # / self.stride, num_heads, dim
             # TODO: Consider mask here 
-            x = layer(x, states[i], i)
+            x = layer(x, states[i], i, rpe)
             if self.right_context_after_stride != 0:
                 states[i]["encoder_states"] = x[self.left_context_after_stride : -self.right_context_after_stride]
             else:
@@ -164,6 +220,7 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
         else:
             self.squash_mem = lambda x: x
             self.nonlinear_squash_mem = False
+        
 
     def update_mem_banks(self, state, input, layer_num):
         length, _, _ = input.size()
@@ -171,7 +228,7 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             segment = input[0:length]
         else:
             segment = input[self.left_context:length-self.right_context]
-        
+
         segment = segment.transpose(0,2)
         next_m = self.pool(segment)
         next_m = next_m.transpose(0,2)
@@ -190,14 +247,14 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             state["memory_banks"].append(next_m) 
         return state
         
-    def forward(self, x, state, layer_num):
+    def forward(self, x, state, layer_num, rpe):
 
         residual = x
 
         if self.normalize_before:
             x = self.self_attn_layer_norm(x)
 
-        x = self.self_attn(input=x, state=state, layer_num=layer_num)
+        x = self.self_attn(input=x, state=state, layer_num=layer_num, rpe=rpe)
 
         x = self.dropout_module(x)
 
@@ -241,7 +298,8 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             mem_bank_after=args.mem_bank_after,
             shrink_mem_bank=args.shrink_mem_bank,
             shrink_depth=args.shrink_depth,
-            shrink_factor=args.shrink_factor
+            shrink_factor=args.shrink_factor,
+            max_relative_position=args.max_relative_position,
         )
 
 
@@ -283,6 +341,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         shrink_mem_bank=False,
         shrink_depth=3,
         shrink_factor=2,
+        max_relative_position=0,
     ):
         super().__init__(
             embed_dim,
@@ -329,6 +388,21 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             self.shrink_factor = shrink_factor
             self.pooltwo = torch.nn.AdaptiveAvgPool1d(self.shrink_factor)
             self.shrink_depth = shrink_depth
+        
+        if max_relative_position > 0:
+            self.use_rpe = True
+            self.rpe_k = RelativePositionEmbedding(
+                head_dim=embed_dim // num_heads,
+                max_position=max_relative_position,
+            )
+            self.rpe_v = RelativePositionEmbedding(
+                head_dim=embed_dim // num_heads,
+                max_position=max_relative_position,
+            )
+        else:
+            self.use_rpe = False
+            self.rpe_k = None
+            self.rpe_v = None
 
     def update_mem_banks(self, state, input, layer_num):
         length, _, _ = input.size()
@@ -358,11 +432,17 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
     def shrink_banks(self, memory):
         num_banks = len(memory)
         if num_banks > self.shrink_depth:
-            self.pooltwo(memory[self.shrink_depth])
-        length = self.shrink_depth*self.mem_bank_size + (num_banks - self.shrink_depth)*self.shrink_factor
+            pos = num_banks - self.shrink_depth - 1
+            segment = memory[pos].transpose(0,2)
+            segment = self.pooltwo(segment)
+            memory[pos] = segment.transpose(0,2)
+            length = self.shrink_depth*self.mem_bank_size + (num_banks - self.shrink_depth)*self.shrink_factor
+        else:
+            length = num_banks*self.mem_bank_size
         return memory, length 
 
-    def forward(self, input, state, layer_num):
+
+    def forward(self, input, state, layer_num, rpe):
         """
         input: Encoder states of current segment with left or right context,
             plus one summarization query
@@ -379,7 +459,6 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             state["memory_banks"] = memory
         
         if self.shrink_mem_bank:
-            mem_bank_len = 0
             memory, mem_bank_len = self.shrink_banks(memory)
             state["memory_banks"] = memory
         else:
@@ -412,6 +491,14 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 
         attention_weights = torch.bmm(q, k.transpose(1, 2))
        
+        if self.use_rpe and rpe is not None and self.rpe_k is not None:
+            r_k = self.rpe_k(rpe)
+            # [q, B*h, d] * [q, k, d] -> [B*h, q, k]
+            attention_weights_rpe = torch.matmul(
+                q.transpose(0, 1), r_k.transpose(1, 2)
+            ).transpose(0, 1)
+            attention_weights = attention_weights + attention_weights_rpe
+
         if self.std_scale is not None:
             attention_weights = attention_suppression(attention_weights, self.std_scale)
        
@@ -430,6 +517,14 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         # [T, T, B, n_head] + [T, B, n_head, d_head] -> [T, B, n_head, d_head]
         attention = torch.bmm(attention_probs, v)
 
+        if self.use_rpe and rpe is not None and self.rpe_v is not None:
+            r_v = self.rpe_v(rpe)
+            attention_rpe = torch.matmul(
+                attention_probs.transpose(0, 1), r_v
+            ).transpose(0, 1)
+
+            attention = attention + attention_rpe
+                
         assert list(attention.shape) == [
             batch_size * self.num_heads,
             length,
@@ -623,9 +718,16 @@ def augmented_memory_no_sum(klass):
             parser.add_argument(
                 "--shrink-depth",
                 type=int,
-                default=1,
+                default=0,
                 help="Size of mem_bank",
             )
+            parser.add_argument(
+                "--max-relative-position",
+                type=int,
+                default=0,
+                help="Relative Position",
+            )
+            
 
 
 
