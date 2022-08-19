@@ -20,7 +20,7 @@ class LabelSmoothedCrossEntropyCriterionConfig(FairseqDataclass):
         metadata={"help": "epsilon for label smoothing, 0 means no label smoothing"},
     )
     report_accuracy: bool = field(
-        default=False,
+        default=True,
         metadata={"help": "report accuracy metric"},
     )
     ignore_prefix_size: int = field(
@@ -60,7 +60,7 @@ class LabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         sentence_avg,
         label_smoothing,
         ignore_prefix_size=0,
-        report_accuracy=False,
+        report_accuracy=True,
     ):
         super().__init__(task)
         self.sentence_avg = sentence_avg

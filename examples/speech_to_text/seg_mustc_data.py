@@ -21,14 +21,13 @@ def main(args):
     root = Path(args.data_root).absolute()
     lang = args.lang
     split = args.split
-    pair_type = args.pair_type
 
     cur_root = root / f"en-{lang}"
     assert cur_root.is_dir(), (
         f"{cur_root.as_posix()} does not exist. Skipped."
     )
 
-    dataset = MUSTC(root.as_posix(), lang, split, pair_type)
+    dataset = MUSTC(root.as_posix(), lang, split)
     output = Path(args.output).absolute()
     output.mkdir(exist_ok=True)
     f_text = open(output / f"{split}.{lang}", "w")
@@ -50,7 +49,6 @@ if __name__ == "__main__":
     parser.add_argument("--lang", required=True, type=str)
     parser.add_argument("--output", required=True, type=str)
     parser.add_argument("--split", required=True, choices=MUSTC.SPLITS)
-    parser.add_argument("--pair-type", default=None, type=str, help="Method to create paired sentence dataset, if desired")
     args = parser.parse_args()
 
     main(args)

@@ -71,9 +71,9 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
                 self.transformer_layers.append(AugmentedMemoryTransformerEncoderLayer(args))
 
         self.share_mem_bank_layers = args.share_mem_bank_layers
-        self.max_relative_position = args.max_relative_position
+        self.max_relative_position = getattr(args, "max_relative_position", 0)
         self.mem_bank_size = args.mem_bank_size
-        self.shrink_mem_bank = args.shrink_mem_bank
+        self.shrink_mem_bank = getattr(args, "shrink_mem_bank", False)
         if self.shrink_mem_bank:
             self.shrink_depth = args.shrink_depth
             self.shrink_factor = args.shrink_factor
@@ -205,15 +205,23 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
         self.left_context = args.left_context // args.encoder_stride
         self.right_context = args.right_context // args.encoder_stride
+        self.segment_size = args.segment_size // args.encoder_stride
 
         self.share_mem_bank_layers = args.share_mem_bank_layers
-        self.mem_bank_after = args.mem_bank_after
+        self.mem_bank_after = getattr(args, "mem_bank_after", False)
 
         self.mem_bank_size = args.mem_bank_size
-        self.pool = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
+        self.summarization_method = getattr(args, "summarization_method", "avg_pool")
+        if self.summarization_method == "avg_pool":
+            self.module = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
+        elif self.summarization_method == "max_pool":
+            self.module = torch.nn.AdaptiveMaxPool1d(self.mem_bank_size)
+        elif self.summarization_method == "linear":
+            self.module = torch.nn.Linear(self.segment_size, self.mem_bank_size)
+
         self.max_memory_size = args.max_memory_size
         self.increase_context = args.increase_context
-        self.tanh_on_mem = args.tanh_on_mem
+        self.tanh_on_mem = getattr(args, "tanh_on_mem", True)
         if self.tanh_on_mem:
             self.squash_mem = torch.tanh
             self.nonlinear_squash_mem = True
@@ -224,27 +232,28 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
     def update_mem_banks(self, state, input, layer_num):
         length, _, _ = input.size()
-        if self.increase_context:
-            segment = input[0:length]
-        else:
-            segment = input[self.left_context:length-self.right_context]
+        if self.segment_size == length:
+            if self.increase_context:
+                segment = input[0:length]
+            else:
+                segment = input[self.left_context:length-self.right_context]
 
-        segment = segment.transpose(0,2)
-        next_m = self.pool(segment)
-        next_m = next_m.transpose(0,2)
+            segment = segment.transpose(0,2)
+            next_m = self.module(segment)
+            next_m = next_m.transpose(0,2)
 
-        if self.share_mem_bank_layers is not None:
-          if not any(layer_num in layer for layer in self.share_mem_bank_layers):
-            next_m = self.squash_mem(next_m)
-            state["memory_banks"].append(next_m)
-          else:
-            for pairs in self.share_mem_bank_layers:
-                if layer_num == pairs[0]:
+            if self.share_mem_bank_layers is not None:
+                if not any(layer_num in layer for layer in self.share_mem_bank_layers):
                     next_m = self.squash_mem(next_m)
-                    state["memory_banks"].append(next_m)        
-        else:
-            next_m = self.squash_mem(next_m)
-            state["memory_banks"].append(next_m) 
+                    state["memory_banks"].append(next_m)
+                else:
+                    for pairs in self.share_mem_bank_layers:
+                        if layer_num == pairs[0]:
+                            next_m = self.squash_mem(next_m)
+                            state["memory_banks"].append(next_m)        
+            else:
+                next_m = self.squash_mem(next_m)
+                state["memory_banks"].append(next_m) 
         return state
         
     def forward(self, x, state, layer_num, rpe):
@@ -288,18 +297,20 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             self_attention=True,
             q_noise=self.quant_noise,
             qn_block_size=self.quant_noise_block_size,
-            tanh_on_mem=args.tanh_on_mem,
+            tanh_on_mem=getattr(args, "tanh_on_mem", True),
             max_memory_size=args.max_memory_size,
             share_mem_bank_layers=args.share_mem_bank_layers,
             mem_bank_size=args.mem_bank_size,
             left_context=args.left_context // args.encoder_stride,
             right_context=args.right_context // args.encoder_stride,
             increase_context=args.increase_context,
-            mem_bank_after=args.mem_bank_after,
-            shrink_mem_bank=args.shrink_mem_bank,
-            shrink_depth=args.shrink_depth,
-            shrink_factor=args.shrink_factor,
-            max_relative_position=args.max_relative_position,
+            mem_bank_after=getattr(args, "mem_bank_after", False),
+            shrink_mem_bank=getattr(args, "shrink_mem_bank", False),
+            shrink_depth=getattr(args, "shrink_depth",0),
+            shrink_factor=getattr(args, "shrink_factor", 0),
+            max_relative_position=getattr(args, "max_relative_position", 0),
+            segment_size=args.segment_size // args.encoder_stride,
+            summarization_method=getattr(args, "summarization_method", "avg_pool"),
         )
 
 
@@ -342,6 +353,8 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         shrink_depth=3,
         shrink_factor=2,
         max_relative_position=0,
+        segment_size=0,
+        summarization_method="avg_pool"
     ):
         super().__init__(
             embed_dim,
@@ -375,18 +388,31 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 
         self.share_mem_bank_layers = share_mem_bank_layers
         self.mem_bank_size = mem_bank_size
-        self.left_context=left_context
-        self.right_context=right_context
-        self.increase_context=increase_context
+        self.left_context = left_context
+        self.right_context = right_context
+        self.increase_context = increase_context
+        self.segment_size = segment_size
         
         self.mem_bank_size = mem_bank_size
-        self.pool = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
         self.mem_bank_after = mem_bank_after
+
+        self.summarization_method = summarization_method
+        if self.summarization_method == "avg_pool":
+            self.module = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
+        elif self.summarization_method == "max_pool":
+            self.module = torch.nn.AdaptiveMaxPool1d(self.mem_bank_size)
+        elif self.summarization_method == "linear":
+            self.module = torch.nn.Linear(self.segment_size, self.mem_bank_size)
 
         self.shrink_mem_bank = shrink_mem_bank
         if self.shrink_mem_bank:
             self.shrink_factor = shrink_factor
-            self.pooltwo = torch.nn.AdaptiveAvgPool1d(self.shrink_factor)
+            if self.summarization_method == "avg_pool":
+                self.moduletwo = torch.nn.AdaptiveAvgPool1d(self.shrink_factor)
+            elif self.summarization_method == "max_pool":
+                self.moduletwo = torch.nn.AdaptiveMaxPool1d(self.shrink_factor)
+            elif self.summarization_method == "linear":
+                self.moduletwo = torch.nn.Linear(self.segment_size, self.shrink_factor)
             self.shrink_depth = shrink_depth
         
         if max_relative_position > 0:
@@ -406,27 +432,28 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 
     def update_mem_banks(self, state, input, layer_num):
         length, _, _ = input.size()
-        if self.increase_context:
-            segment = input[0:length]
-        else:
-            segment = input[self.left_context:length-self.right_context]
-        
-        segment = segment.transpose(0,2)
-        next_m = self.pool(segment)
-        next_m = next_m.transpose(0,2)
+        if self.segment_size == length:
+            if self.increase_context:
+                segment = input[0:length]
+            else:
+                segment = input[self.left_context:length-self.right_context]
+            
+            segment = segment.transpose(0,2)
+            next_m = self.module(segment)
+            next_m = next_m.transpose(0,2)
 
-        if self.share_mem_bank_layers is not None:
-          if not any(layer_num in layer for layer in self.share_mem_bank_layers):
-            next_m = self.squash_mem(next_m)
-            state["memory_banks"].append(next_m)
-          else:
-            for pairs in self.share_mem_bank_layers:
-                if layer_num == pairs[0]:
+            if self.share_mem_bank_layers is not None:
+                if not any(layer_num in layer for layer in self.share_mem_bank_layers):
                     next_m = self.squash_mem(next_m)
-                    state["memory_banks"].append(next_m)        
-        else:
-            next_m = self.squash_mem(next_m)
-            state["memory_banks"].append(next_m) 
+                    state["memory_banks"].append(next_m)
+                else:
+                    for pairs in self.share_mem_bank_layers:
+                        if layer_num == pairs[0]:
+                            next_m = self.squash_mem(next_m)
+                            state["memory_banks"].append(next_m)        
+            else:
+                next_m = self.squash_mem(next_m)
+                state["memory_banks"].append(next_m) 
         return state
 
     def shrink_banks(self, memory):
@@ -434,7 +461,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         if num_banks > self.shrink_depth:
             pos = num_banks - self.shrink_depth - 1
             segment = memory[pos].transpose(0,2)
-            segment = self.pooltwo(segment)
+            segment = self.moduletwo(segment)
             memory[pos] = segment.transpose(0,2)
             length = self.shrink_depth*self.mem_bank_size + (num_banks - self.shrink_depth)*self.shrink_factor
         else:
@@ -699,7 +726,7 @@ def augmented_memory_no_sum(klass):
             )
             parser.add_argument(
                 "--tanh-on-mem",
-                action="store_true",
+                action="store_false",
                 default=True,
                 help="if True, squash memory banks",
             )
@@ -726,6 +753,12 @@ def augmented_memory_no_sum(klass):
                 type=int,
                 default=0,
                 help="Relative Position",
+            )
+            parser.add_argument(
+                "--summarization-method", 
+                default="avg_pool",
+                choices=["avg_pool", "max_pool", "linear"],
+                help="Summarization method"
             )
             
 
