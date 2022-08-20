@@ -232,7 +232,7 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
     def update_mem_banks(self, state, input, layer_num):
         length, _, _ = input.size()
-        if self.segment_size == length:
+        if self.segment_size == length - (self.left_context + self.right_context):
             if self.increase_context:
                 segment = input[0:length]
             else:
@@ -432,7 +432,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 
     def update_mem_banks(self, state, input, layer_num):
         length, _, _ = input.size()
-        if self.segment_size == length:
+        if self.segment_size == length - (self.left_context + self.right_context):
             if self.increase_context:
                 segment = input[0:length]
             else:
@@ -726,7 +726,7 @@ def augmented_memory_no_sum(klass):
             )
             parser.add_argument(
                 "--tanh-on-mem",
-                action="store_false",
+                action="store_true",
                 default=True,
                 help="if True, squash memory banks",
             )
