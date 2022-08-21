@@ -27,7 +27,7 @@ import json
 # ------------------------------------------------------------------------------
 
 
-class AugmentedMemoryConvTransformerEncoder(ConvTransformerEncoder):
+class AugmentedMemoryConvTransformerEncoder_layer_mem(ConvTransformerEncoder):
     def __init__(self, args):
         super().__init__(args)
 
@@ -463,7 +463,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 # ------------------------------------------------------------------------------
 #   SequenceEncoder
 # ------------------------------------------------------------------------------
-class SequenceEncoder(FairseqEncoder):
+class SequenceEncoder_layer_mem(FairseqEncoder):
     """
     SequenceEncoder encodes sequences.
 
@@ -629,7 +629,7 @@ class SequenceEncoder(FairseqEncoder):
 # ------------------------------------------------------------------------------
 #   Augmented memory model decorator
 # ------------------------------------------------------------------------------
-def augmented_memory(klass):
+def augmented_memory_layer_mem(klass):
     class StreamSeq2SeqModel(klass):
         @staticmethod
         def add_args(parser):
