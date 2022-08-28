@@ -44,7 +44,7 @@ class AugmentedMemoryConvTransformerEncoder_enc_mem(ConvTransformerEncoder):
   
         self.pool = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
 
-        self.tanh_on_mem = True
+        self.tanh_on_mem = getattr(args, "tanh_on_mem", False)
         if self.tanh_on_mem:
             self.squash_mem = torch.tanh
             self.nonlinear_squash_mem = True
@@ -217,7 +217,6 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             self_attention=True,
             q_noise=self.quant_noise,
             qn_block_size=self.quant_noise_block_size,
-            tanh_on_mem=True,
             max_memory_size=args.max_memory_size,
             mem_bank_size=args.mem_bank_size,
         )
@@ -248,7 +247,6 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         encoder_decoder_attention=False,
         q_noise=0.0,
         qn_block_size=8,
-        tanh_on_mem=False,
         std_scale=0.5,  # 0.5 based on https://arxiv.org/abs/2005.09137
         max_memory_size=-1,
         mem_bank_size=1,
@@ -487,5 +485,12 @@ def augmented_memory_enc_mem(klass):
                 default=1,
                 help="Size of mem_bank",
             )
+            parser.add_argument(
+                "--tanh-on-mem",
+                action="store_true",
+                default=False,
+                help="if True, squash memory banks",
+            )
+
     StreamSeq2SeqModel.__name__ = klass.__name__
     return StreamSeq2SeqModel

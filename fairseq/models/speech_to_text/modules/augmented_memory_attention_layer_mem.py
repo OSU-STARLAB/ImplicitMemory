@@ -266,7 +266,7 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             self_attention=True,
             q_noise=self.quant_noise,
             qn_block_size=self.quant_noise_block_size,
-            tanh_on_mem=True,
+            tanh_on_mem=getattr(args, "tanh_on_mem", False),
             max_memory_size=args.max_memory_size,
             share_mem_bank_layers=args.share_mem_bank_layers,
         )
@@ -684,6 +684,12 @@ def augmented_memory_layer_mem(klass):
                 type=int,
                 default=-1,
                 help="Right context for the segment.",
+            )
+            parser.add_argument(
+                "--tanh-on-mem",
+                action="store_true",
+                default=False,
+                help="if True, squash memory banks",
             )
 
     StreamSeq2SeqModel.__name__ = klass.__name__

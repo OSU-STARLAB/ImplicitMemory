@@ -77,6 +77,7 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
         if self.shrink_mem_bank:
             self.shrink_depth = args.shrink_depth
             self.shrink_factor = args.shrink_factor
+        self.max_memory_size = args.max_memory_size
 
     def stride(self):
         # Hard coded here. Should infer from convs in future
@@ -115,6 +116,8 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
         return distance_clamp
 
     def get_membank_len(self, memory):
+        if self.max_memory_size > -1 and len(memory) > self.max_memory_size:
+            memory = memory[-self.max_memory_size :]
         num_banks = len(memory)
         if self.shrink_mem_bank and num_banks > self.shrink_depth:
             length = self.shrink_depth*self.mem_bank_size + (num_banks - self.shrink_depth)*self.shrink_factor
@@ -221,7 +224,7 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
         self.max_memory_size = args.max_memory_size
         self.increase_context = args.increase_context
-        self.tanh_on_mem = getattr(args, "tanh_on_mem", True)
+        self.tanh_on_mem = getattr(args, "tanh_on_mem", False)
         if self.tanh_on_mem:
             self.squash_mem = torch.tanh
             self.nonlinear_squash_mem = True
@@ -297,7 +300,7 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             self_attention=True,
             q_noise=self.quant_noise,
             qn_block_size=self.quant_noise_block_size,
-            tanh_on_mem=getattr(args, "tanh_on_mem", True),
+            tanh_on_mem=getattr(args, "tanh_on_mem", False),
             max_memory_size=args.max_memory_size,
             share_mem_bank_layers=args.share_mem_bank_layers,
             mem_bank_size=args.mem_bank_size,
@@ -727,7 +730,7 @@ def augmented_memory_no_sum(klass):
             parser.add_argument(
                 "--tanh-on-mem",
                 action="store_true",
-                default=True,
+                default=False,
                 help="if True, squash memory banks",
             )
             parser.add_argument(
