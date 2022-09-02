@@ -32,10 +32,6 @@ class AugmentedMemoryConvTransformerEncoder(ConvTransformerEncoder):
 
         args.encoder_stride = self.stride()
 
-        self.left_context = args.left_context // args.encoder_stride
-
-        self.right_context = args.right_context // args.encoder_stride
-
         self.left_context_after_stride = args.left_context // args.encoder_stride
         self.right_context_after_stride = args.right_context // args.encoder_stride
 
@@ -69,18 +65,20 @@ class AugmentedMemoryConvTransformerEncoder(ConvTransformerEncoder):
                 # Initializes Memory banks
                 rows = len(self.share_mem_bank_layers)
                 for i in range(rows):
-                    cols = len(self.share_mem_bank_layers[i]);
+                    cols = len(self.share_mem_bank_layers[i])
                     for j in range(cols):
                         states[self.share_mem_bank_layers[i][j]]["memory_banks"] = states[self.share_mem_bank_layers[i][0]]["memory_banks"]
         return states
 
-    def forward(self, src_tokens, src_lengths, states=None):
+    def forward(self, src_tokens, src_lengths, new_left_context, states=None):
         """Encode input sequence.
         :param torch.Tensor xs: input tensor
         :param torch.Tensor masks: input mask
         :return: position embedded tensor and mask
         :rtype Tuple[torch.Tensor, torch.Tensor]:
         """
+        self.left_context_after_stride = new_left_context // self.stride()
+
         bsz, max_seq_len, _ = src_tokens.size()
         x = (
             src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
@@ -105,6 +103,7 @@ class AugmentedMemoryConvTransformerEncoder(ConvTransformerEncoder):
         )
 
         positions = self.embed_positions(encoder_padding_mask).transpose(0, 1)
+
         x += positions
 
         x = F.dropout(x, p=self.dropout, training=self.training)
@@ -118,7 +117,7 @@ class AugmentedMemoryConvTransformerEncoder(ConvTransformerEncoder):
             # (self.left_size + self.segment_size + self.right_size)
             # / self.stride, num_heads, dim
             # TODO: Consider mask here 
-            x = layer(x, states[i], i)
+            x = layer(x, states[i], i, self.left_context_after_stride)
             if self.right_context_after_stride != 0:
                 states[i]["encoder_states"] = x[self.left_context_after_stride : -self.right_context_after_stride]
             else:
@@ -156,7 +155,8 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
         self.share_mem_bank_layers = args.share_mem_bank_layers
 
-    def forward(self, x, state, layer_num):
+    def forward(self, x, state, layer_num, new_left_context):
+        self.left_context = new_left_context
 
         length, batch_size, x_dim = x.size()
 
@@ -210,7 +210,7 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             self_attention=True,
             q_noise=self.quant_noise,
             qn_block_size=self.quant_noise_block_size,
-            tanh_on_mem=getattr(args, "tanh_on_mem", False),
+            tanh_on_mem=getattr(args, "tanh-on-mem", False),
             max_memory_size=args.max_memory_size,
             share_mem_bank_layers=args.share_mem_bank_layers,
         )
@@ -456,10 +456,20 @@ class SequenceEncoder(FairseqEncoder):
 
         seg_encoder_states_lengths: List[Tuple[Tensor, Tensor]] = []
 
+        count = 0
         for seg_src_tokens, seg_src_lengths in seg_src_tokens_lengths:
+            left = self.left_context - count*self.segment_size
+            if left > 0:
+                seg_src_tokens = seg_src_tokens[:, left:, :]
+                seg_src_lengths = seg_src_lengths - left
+            else:
+                left=0
+            count+=1
+            
             (seg_encoder_states, seg_enc_lengths, states) = self.module(
                 seg_src_tokens,
                 seg_src_lengths,
+                self.left_context - left,
                 states=states,
             )
 

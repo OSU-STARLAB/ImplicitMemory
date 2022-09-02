@@ -4,7 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from math import ceil
-from tokenize import blank_re
 from typing import Tuple, List
 
 import torch
@@ -142,7 +141,7 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
             length = num_banks*self.mem_bank_size
         return length 
 
-    def update_memory(self, memory, input):
+    def update_left_banks(self, memory, input):
         if self.right_context_after_stride != 0 and self.left_context_method == "after_input":
             input = input[:-self.right_context_after_stride]
 
@@ -152,7 +151,7 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
             memory.pop(0)
         return memory
 
-    def add_memory(self, memory, input, mem_size, src_lengths):
+    def add_left_context(self, memory, input, mem_size, src_lengths):
         if mem_size > 0:
             left_context = memory[0]
 
@@ -179,7 +178,7 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
 
         return input, src_lengths, left_context_size
 
-    def forward(self, src_tokens, src_lengths, left_context_size, memory, states=None):
+    def forward(self, src_tokens, src_lengths, left_context_size, left_bank, states=None):
         """Encode input sequence.
         :param torch.Tensor xs: input tensor
         :param torch.Tensor masks: input mask
@@ -209,7 +208,7 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
 
         if self.left_context_method == "after_input" or self.left_context_method == "after_output":
             input = x
-            x, input_lengths, self.left_context_after_stride = self.add_memory(memory, x, len(memory), input_lengths)
+            x, input_lengths, self.left_context_after_stride = self.add_left_context(left_bank, x, len(left_bank), input_lengths)
 
         encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
             input_lengths, batch_first=True
@@ -256,13 +255,13 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
                 .sum(dim=1, keepdim=True)
                 .long()
             )
-
+            
         if self.left_context_method == "after_input":
-            memory = self.update_memory(memory, input)
+            left_bank = self.update_left_banks(left_bank, input)
         elif self.left_context_method == "after_output":
-            memory = self.update_memory(memory, states[-1]["encoder_states"])
+            left_bank = self.update_left_banks(left_bank, states[-1]["encoder_states"])
 
-        return states[-1]["encoder_states"], lengths, memory, states
+        return states[-1]["encoder_states"], lengths, left_bank, states
 
 
 # ------------------------------------------------------------------------------
@@ -689,7 +688,7 @@ class SequenceEncoder_no_sum(FairseqEncoder):
         elif self.summarization_method == "linear":
             self.summarize = torch.nn.Linear(self.segment_size, self.left_context)
 
-    def update_memory(self, memory, input):
+    def update_left_banks(self, memory, input):
         if self.right_context != 0:
             input = input[:,:-self.right_context]
 
@@ -699,7 +698,7 @@ class SequenceEncoder_no_sum(FairseqEncoder):
             memory.pop(0)
         return memory
 
-    def add_memory(self, memory, input, mem_size, seg_src_lengths):
+    def add_left_context(self, memory, input, mem_size, seg_src_lengths):
         if mem_size > 0:
             left_context = memory[0]
 
@@ -734,7 +733,7 @@ class SequenceEncoder_no_sum(FairseqEncoder):
     ):
 
         if self.left_context_method is not None:
-            memory = []
+            left_bank = []
             seg_src_tokens_lengths = sequence_to_segments(
                 sequence=src_tokens,
                 time_axis=self.input_time_axis,
@@ -744,7 +743,7 @@ class SequenceEncoder_no_sum(FairseqEncoder):
                 extra_right_context=self.right_context,
             )
         else:
-            memory = None
+            left_bank = None
             seg_src_tokens_lengths = sequence_to_segments(
                 sequence=src_tokens,
                 time_axis=self.input_time_axis,
@@ -761,15 +760,15 @@ class SequenceEncoder_no_sum(FairseqEncoder):
             if self.left_context_method is not None:
                 if self.left_context_method == "before_input":
                     src_tokens = seg_src_tokens
-                    mem_size = len(memory)
-                    seg_src_tokens, seg_src_lengths, left_context_size = self.add_memory(memory, seg_src_tokens, mem_size, seg_src_lengths)
+                    mem_size = len(left_bank)
+                    seg_src_tokens, seg_src_lengths, left_context_size = self.add_left_context(left_bank, seg_src_tokens, mem_size, seg_src_lengths)
                 else:
                     left_context_size = self.left_context
-                (seg_encoder_states, seg_enc_lengths, memory, states) = self.module(
+                (seg_encoder_states, seg_enc_lengths, left_bank, states) = self.module(
                         seg_src_tokens,
                         seg_src_lengths,
                         left_context_size,
-                        memory,
+                        left_bank,
                         states=states,
                 )
             else:
@@ -781,17 +780,17 @@ class SequenceEncoder_no_sum(FairseqEncoder):
                     left=0
                 count+=1
 
-                (seg_encoder_states, seg_enc_lengths, memory, states) = self.module(
+                (seg_encoder_states, seg_enc_lengths, left_bank, states) = self.module(
                     seg_src_tokens,
                     seg_src_lengths,
                     self.left_context - left,
-                    memory,
+                    left_bank,
                     states=states,
                 )
             seg_encoder_states_lengths.append((seg_encoder_states, seg_enc_lengths))
 
             if self.left_context_method == "before_input":
-                memory = self.update_memory(memory, src_tokens)
+                left_bank = self.update_left_banks(left_bank, src_tokens)
 
         encoder_out, enc_lengths = segments_to_sequence(
             segments=seg_encoder_states_lengths, time_axis=self.output_time_axis
@@ -933,8 +932,5 @@ def augmented_memory_no_sum(klass):
                 help="Right context for the segment.",
             )
             
-
-
-
     StreamSeq2SeqModel.__name__ = klass.__name__
     return StreamSeq2SeqModel
