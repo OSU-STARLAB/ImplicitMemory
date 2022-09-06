@@ -25,11 +25,6 @@ from fairseq.models.speech_to_text.modules.augmented_memory_attention_layer_mem 
     SequenceEncoder_layer_mem,
     AugmentedMemoryConvTransformerEncoder_layer_mem,
 )
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_enc_mem import (
-    augmented_memory_enc_mem,
-    SequenceEncoder_enc_mem,
-    AugmentedMemoryConvTransformerEncoder_enc_mem,
-)
 from fairseq.models.speech_to_text.modules.augmented_memory_attention_query_size import (
     augmented_memory_query_size,
     SequenceEncoder_query_size,
@@ -40,20 +35,20 @@ from fairseq.models.speech_to_text.modules.augmented_memory_attention_no_sum imp
     SequenceEncoder_no_sum,
     AugmentedMemoryConvTransformerEncoder_no_sum,
 )
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_conv import (
-    augmented_memory_conv,
-    SequenceEncoder_conv,
-    AugmentedMemoryConvTransformerEncoder_conv,
-)
 from fairseq.models.speech_to_text.modules.augmented_memory_attention_fill_sum import (
     augmented_memory_fill_sum,
     SequenceEncoder_fill_sum,
     AugmentedMemoryConvTransformerEncoder_fill_sum,
 )
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_layer_mem_shrink import (
-    augmented_memory_layer_mem_shrink,
-    SequenceEncoder_layer_mem_shrink,
-    AugmentedMemoryConvTransformerEncoder_layer_mem_shrink,
+from fairseq.models.speech_to_text.modules.augmented_memory_attention_fill_sum_left import (
+    augmented_memory_fill_sum_left,
+    SequenceEncoder_fill_sum_left,
+    AugmentedMemoryConvTransformerEncoder_fill_sum_left,
+)
+from fairseq.models.speech_to_text.modules.augmented_memory_attention_fill_sum_leftV2 import (
+    augmented_memory_fill_sum_leftV2,
+    SequenceEncoder_fill_sum_leftV2,
+    AugmentedMemoryConvTransformerEncoder_fill_sum_leftV2,
 )
 
 from torch import nn, Tensor
@@ -138,27 +133,6 @@ class AugmentedMemoryConvTransformerModel(SimulConvTransformerModel):
 def augmented_memory_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
-#Conv Augmented Memory Transformer
-@register_model("convtransformer_augmented_memory_conv")
-@augmented_memory_conv
-class AugmentedMemoryConvTransformerModel_conv(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_conv(args, AugmentedMemoryConvTransformerEncoder_conv(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_conv", "convtransformer_augmented_memory_conv"
-)
-def augmented_memory_conv_convtransformer_espnet(args):
-    convtransformer_espnet(args)
 #Layer_Mem Augment Memory Transformer
 @register_model("convtransformer_augmented_memory_layer_mem")
 @augmented_memory_layer_mem
@@ -179,50 +153,6 @@ class AugmentedMemoryConvTransformerModel_layer_mem(SimulConvTransformerModel):
     "convtransformer_augmented_memory_layer_mem", "convtransformer_augmented_memory_layer_mem"
 )
 def augmented_memory_layer_mem_convtransformer_espnet(args):
-    convtransformer_espnet(args)
-
-#Layer_Mem_shrink Augment Memory Transformer
-@register_model("convtransformer_augmented_memory_layer_mem_shrink")
-@augmented_memory_layer_mem_shrink
-class AugmentedMemoryConvTransformerModel_layer_mem_shrink(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_layer_mem_shrink(args, AugmentedMemoryConvTransformerEncoder_layer_mem_shrink(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_layer_mem_shrink", "convtransformer_augmented_memory_layer_mem_shrink"
-)
-def augmented_memory_layer_mem_shrink_convtransformer_espnet(args):
-    convtransformer_espnet(args)
-
-#Enc_Mem Augmented Memory Transormer
-@register_model("convtransformer_augmented_memory_enc_mem")
-@augmented_memory_enc_mem
-class AugmentedMemoryConvTransformerModel_enc_mem(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_enc_mem(args, AugmentedMemoryConvTransformerEncoder_enc_mem(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_enc_mem", "convtransformer_augmented_memory_enc_mem"
-)
-def augmented_memory_enc_mem_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
 #Query_Size Augmented Memory Transormer
@@ -262,7 +192,6 @@ class AugmentedMemoryConvTransformerModel_no_sum(SimulConvTransformerModel):
 
         return encoder
 
-
 @register_model_architecture(
     "convtransformer_augmented_memory_no_sum", "convtransformer_augmented_memory_no_sum"
 )
@@ -288,6 +217,48 @@ class AugmentedMemoryConvTransformerModel_fill_sum(SimulConvTransformerModel):
     "convtransformer_augmented_memory_fill_sum", "convtransformer_augmented_memory_fill_sum"
 )
 def augmented_memory_fill_sum_convtransformer_espnet(args):
+    convtransformer_espnet(args)
+
+#Fill_Sum_left Augmented Memory Transormer
+@register_model("convtransformer_augmented_memory_fill_sum_left")
+@augmented_memory_fill_sum_left
+class AugmentedMemoryConvTransformerModel_fill_sum_left(SimulConvTransformerModel):
+    @classmethod
+    def build_encoder(cls, args):
+        encoder = SequenceEncoder_fill_sum_left(args, AugmentedMemoryConvTransformerEncoder_fill_sum_left(args))
+
+        if getattr(args, "load_pretrained_encoder_from", None) is not None:
+            encoder = checkpoint_utils.load_pretrained_component_from_model(
+                component=encoder, checkpoint=args.load_pretrained_encoder_from
+            )
+
+        return encoder
+
+@register_model_architecture(
+    "convtransformer_augmented_memory_fill_sum_left", "convtransformer_augmented_memory_fill_sum_left"
+)
+
+def augmented_memory_fill_sum_left_convtransformer_espnet(args):
+    convtransformer_espnet(args)
+#Fill_Sum_leftV2 Augmented Memory Transormer
+@register_model("convtransformer_augmented_memory_fill_sum_leftV2")
+@augmented_memory_fill_sum_leftV2
+class AugmentedMemoryConvTransformerModel_fill_sum_leftV2(SimulConvTransformerModel):
+    @classmethod
+    def build_encoder(cls, args):
+        encoder = SequenceEncoder_fill_sum_leftV2(args, AugmentedMemoryConvTransformerEncoder_fill_sum_leftV2(args))
+
+        if getattr(args, "load_pretrained_encoder_from", None) is not None:
+            encoder = checkpoint_utils.load_pretrained_component_from_model(
+                component=encoder, checkpoint=args.load_pretrained_encoder_from
+            )
+
+        return encoder
+
+@register_model_architecture(
+    "convtransformer_augmented_memory_fill_sum_leftV2", "convtransformer_augmented_memory_fill_sum_leftV2"
+)
+def augmented_memory_fill_sum_leftV2_convtransformer_espnet(args):
     convtransformer_espnet(args)
 # ============================================================================ #
 #   Convtransformer
