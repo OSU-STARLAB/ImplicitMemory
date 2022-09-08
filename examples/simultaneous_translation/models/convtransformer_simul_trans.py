@@ -20,11 +20,6 @@ from fairseq.models.speech_to_text.modules.augmented_memory_attention import (
     SequenceEncoder,
     AugmentedMemoryConvTransformerEncoder,
 )
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_layer_mem import (
-    augmented_memory_layer_mem,
-    SequenceEncoder_layer_mem,
-    AugmentedMemoryConvTransformerEncoder_layer_mem,
-)
 from fairseq.models.speech_to_text.modules.augmented_memory_attention_query_size import (
     augmented_memory_query_size,
     SequenceEncoder_query_size,
@@ -133,28 +128,6 @@ class AugmentedMemoryConvTransformerModel(SimulConvTransformerModel):
 def augmented_memory_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
-#Layer_Mem Augment Memory Transformer
-@register_model("convtransformer_augmented_memory_layer_mem")
-@augmented_memory_layer_mem
-class AugmentedMemoryConvTransformerModel_layer_mem(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_layer_mem(args, AugmentedMemoryConvTransformerEncoder_layer_mem(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_layer_mem", "convtransformer_augmented_memory_layer_mem"
-)
-def augmented_memory_layer_mem_convtransformer_espnet(args):
-    convtransformer_espnet(args)
-
 #Query_Size Augmented Memory Transormer
 @register_model("convtransformer_augmented_memory_query_size")
 @augmented_memory_query_size
@@ -169,7 +142,6 @@ class AugmentedMemoryConvTransformerModel_query_size(SimulConvTransformerModel):
             )
 
         return encoder
-
 
 @register_model_architecture(
     "convtransformer_augmented_memory_query_size", "convtransformer_augmented_memory_query_size"

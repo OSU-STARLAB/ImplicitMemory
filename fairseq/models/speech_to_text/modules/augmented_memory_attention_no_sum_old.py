@@ -50,7 +50,7 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
     def __init__(self, args):
         super().__init__(args)
 
-        args.encoder_stride = 4
+        args.encoder_stride = self.stride()
         self.encoder_stride = args.encoder_stride
 
         self.left_context_after_stride = args.left_context // args.encoder_stride
@@ -75,13 +75,29 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
         self.share_mem_bank_layers = args.share_mem_bank_layers
         self.max_relative_position = getattr(args, "max_relative_position", 0)
         self.mem_bank_size = args.mem_bank_size
+        self.shrink_mem_bank = getattr(args, "shrink_mem_bank", False)
+        if self.shrink_mem_bank:
+            self.shrink_depth = args.shrink_depth
+            self.shrink_factor = args.shrink_factor
         self.max_memory_size = args.max_memory_size
 
-        self.encoder_left_context = getattr(args, "encoder_left_context", False)
-        self.left_compression_factor = getattr(args, "left_compression_factor", 1)
-        self.max_token_count = self.left_compression_factor*self.left_context_after_stride
-        self.max_segment_count = ceil(self.max_token_count/self.segment_size) + 1
-        self.summarize = torch.nn.AvgPool1d(kernel_size=self.left_compression_factor, stride=self.left_compression_factor, padding=0)
+        self.left_context_method = args.left_context_method
+        if self.left_context_method is not None:
+            self.summarization_method = args.summarization_method
+            if self.summarization_method == "avg_pool":
+                self.summarize = torch.nn.AdaptiveAvgPool1d(self.left_context_after_stride)
+            elif self.summarization_method == "max_pool":
+                self.summarize = torch.nn.AdaptiveMaxPool1d(self.left_context_after_stride)
+            elif self.summarization_method == "linear":
+                self.summarize = torch.nn.Linear(self.segment_size, self.left_context_after_stride)
+            self.max_token_count = args.max_token_count // args.encoder_stride
+            self.max_segment_count = ceil(self.max_token_count / self.segment_size)
+            self.shrink_left_context = getattr(args, "shrink_left_context", False)
+
+    def stride(self):
+        # Hard coded here. Should infer from convs in future
+        stride = 4
+        return stride
 
     def initialize_states(self, states):
         if states is None:
@@ -119,51 +135,57 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
         if self.max_memory_size > -1 and len(memory) > self.max_memory_size:
             memory = memory[-self.max_memory_size :]
         num_banks = len(memory)
-        length = num_banks*self.mem_bank_size
+        if self.shrink_mem_bank and num_banks > self.shrink_depth:
+            length = self.shrink_depth*self.mem_bank_size + (num_banks - self.shrink_depth)*self.shrink_factor
+        else:
+            length = num_banks*self.mem_bank_size
         return length 
 
-    def update_memory(self, memory, input):
+    def update_left_banks(self, memory, input):
+        if self.right_context_after_stride != 0 and self.left_context_method == "after_input":
+            input = input[:-self.right_context_after_stride]
+
         memory.append(input)
 
         if len(memory) > self.max_segment_count:
             memory.pop(0)
         return memory
 
-    def add_memory(self, memory, input, src_lengths, old_left_context_size):
-        mem_size = len(memory)
-        if mem_size > 0 and self.left_context_after_stride != 0:
-            left_context = torch.cat(memory, dim=0)
-            if old_left_context_size != 0:
-                left_context = left_context[:-old_left_context_size]
-            left_context_size = left_context.size(0)
+    def add_left_context(self, memory, input, mem_size, src_lengths):
+        if mem_size > 0:
+            left_context = memory[0]
+
+            for i in range(1, mem_size):
+                segment = memory[i]
+                left_context = torch.cat([left_context] + [segment], dim=0)
             
-            if left_context_size - self.max_token_count > 0:
-                left_context = left_context[left_context_size-self.max_token_count:]
-            left_context = self.compress(left_context)
-            left_context_size = left_context.size(0)
-            src_lengths = src_lengths + left_context_size
-            left_context_size = old_left_context_size + left_context_size
+            left_context_size = left_context.size()[0]
+        
+            if self.left_context_after_stride < left_context_size:
+                if left_context_size > self.max_token_count:
+                    left_context = left_context[left_context_size-self.max_token_count:]
+                left_context = left_context.transpose(0,2)
+                left_context = self.summarize(left_context)
+                left_context = left_context.transpose(0,2)
+                src_lengths = src_lengths + self.left_context_after_stride
+                left_context_size = self.left_context_after_stride
+            else:
+                src_lengths = src_lengths + left_context_size
 
             input = torch.cat([left_context] + [input], dim=0)
         else:
-            left_context_size = old_left_context_size
+            left_context_size = 0
 
         return input, src_lengths, left_context_size
 
-    def compress(self, left_context):
-        left_context = left_context.transpose(0,2)
-        left_context = self.summarize(left_context)
-        left_context = left_context.transpose(0,2)
-        return left_context
-
-    def forward(self, src_tokens, src_lengths, left_context_size, states=None, left_memory=None):
+    def forward(self, src_tokens, src_lengths, left_context_size, left_bank, states=None):
         """Encode input sequence.
         :param torch.Tensor xs: input tensor
         :param torch.Tensor masks: input mask
         :return: position embedded tensor and mask
         :rtype Tuple[torch.Tensor, torch.Tensor]:
         """
-        left_context_size = left_context_size // self.encoder_stride
+        self.left_context_after_stride = left_context_size // self.encoder_stride
 
         bsz, max_seq_len, _ = src_tokens.size()
         x = (
@@ -184,8 +206,9 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
             x.size(0) * src_lengths.new_ones([src_lengths.size(0)]).long(),
         )
 
-        if self.encoder_left_context:
-            x, input_lengths, left_context_size = self.add_memory(left_memory, x, input_lengths, left_context_size)
+        if self.left_context_method == "after_input" or self.left_context_method == "after_output":
+            input = x
+            x, input_lengths, self.left_context_after_stride = self.add_left_context(left_bank, x, len(left_bank), input_lengths)
 
         encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
             input_lengths, batch_first=True
@@ -210,16 +233,16 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
             # (self.left_size + self.segment_size + self.right_size)
             # / self.stride, num_heads, dim
             # TODO: Consider mask here 
-            x = layer(x, states[i], i, rpe, left_context_size)
+            x = layer(x, states[i], i, rpe, self.left_context_after_stride)
             if self.right_context_after_stride != 0:
-                states[i]["encoder_states"] = x[left_context_size : -self.right_context_after_stride]
+                states[i]["encoder_states"] = x[self.left_context_after_stride : -self.right_context_after_stride]
             else:
-                states[i]["encoder_states"] = x[left_context_size : ]
+                states[i]["encoder_states"] = x[self.left_context_after_stride : ]
 
         if self.right_context_after_stride != 0:
             lengths = (
                 (
-                    ~encoder_padding_mask[:, left_context_size : -self.right_context_after_stride]
+                    ~encoder_padding_mask[:, self.left_context_after_stride : -self.right_context_after_stride]
                 )
                 .sum(dim=1, keepdim=True)
                 .long()
@@ -227,16 +250,18 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
         else:
             lengths = (
                 (
-                    ~encoder_padding_mask[:, left_context_size :]
+                    ~encoder_padding_mask[:, self.left_context_after_stride :]
                 )
                 .sum(dim=1, keepdim=True)
                 .long()
             )
             
-        if self.encoder_left_context:
-            left_memory = self.update_memory(left_memory, states[-1]["encoder_states"])
+        if self.left_context_method == "after_input":
+            left_bank = self.update_left_banks(left_bank, input)
+        elif self.left_context_method == "after_output":
+            left_bank = self.update_left_banks(left_bank, states[-1]["encoder_states"])
 
-        return states[-1]["encoder_states"], lengths, states, left_memory
+        return states[-1]["encoder_states"], lengths, left_bank, states
 
 
 # ------------------------------------------------------------------------------
@@ -349,6 +374,9 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             right_context=args.right_context // args.encoder_stride,
             increase_context=args.increase_context,
             mem_bank_after=getattr(args, "mem_bank_after", False),
+            shrink_mem_bank=getattr(args, "shrink_mem_bank", False),
+            shrink_depth=getattr(args, "shrink_depth",0),
+            shrink_factor=getattr(args, "shrink_factor", 0),
             max_relative_position=getattr(args, "max_relative_position", 0),
             segment_size=args.segment_size // args.encoder_stride,
             summarization_method=getattr(args, "summarization_method", "avg_pool"),
@@ -390,6 +418,9 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         right_context=0,
         increase_context=False,
         mem_bank_after=False,
+        shrink_mem_bank=False,
+        shrink_depth=3,
+        shrink_factor=2,
         max_relative_position=0,
         segment_size=0,
         summarization_method="avg_pool"
@@ -441,6 +472,17 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             self.module = torch.nn.AdaptiveMaxPool1d(self.mem_bank_size)
         elif self.summarization_method == "linear":
             self.module = torch.nn.Linear(self.segment_size, self.mem_bank_size)
+
+        self.shrink_mem_bank = shrink_mem_bank
+        if self.shrink_mem_bank:
+            self.shrink_factor = shrink_factor
+            if self.summarization_method == "avg_pool":
+                self.moduletwo = torch.nn.AdaptiveAvgPool1d(self.shrink_factor)
+            elif self.summarization_method == "max_pool":
+                self.moduletwo = torch.nn.AdaptiveMaxPool1d(self.shrink_factor)
+            elif self.summarization_method == "linear":
+                self.moduletwo = torch.nn.Linear(self.segment_size, self.shrink_factor)
+            self.shrink_depth = shrink_depth
         
         if max_relative_position > 0:
             self.use_rpe = True
@@ -483,6 +525,19 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
                 state["memory_banks"].append(next_m) 
         return state
 
+    def shrink_banks(self, memory):
+        num_banks = len(memory)
+        if num_banks > self.shrink_depth:
+            pos = num_banks - self.shrink_depth - 1
+            segment = memory[pos].transpose(0,2)
+            segment = self.moduletwo(segment)
+            memory[pos] = segment.transpose(0,2)
+            length = self.shrink_depth*self.mem_bank_size + (num_banks - self.shrink_depth)*self.shrink_factor
+        else:
+            length = num_banks*self.mem_bank_size
+        return memory, length 
+
+
     def forward(self, input, state, layer_num, rpe):
         """
         input: Encoder states of current segment with left or right context,
@@ -499,7 +554,11 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             memory = memory[-self.max_memory_size :]
             state["memory_banks"] = memory
         
-        mem_bank_len = len(memory)*self.mem_bank_size
+        if self.shrink_mem_bank:
+            memory, mem_bank_len = self.shrink_banks(memory)
+            state["memory_banks"] = memory
+        else:
+            mem_bank_len = len(memory)*self.mem_bank_size
 
         memory_and_input = torch.cat(memory + [input], dim=0)
         input_query = input
@@ -615,14 +674,21 @@ class SequenceEncoder_no_sum(FairseqEncoder):
         self.segment_size = args.segment_size
         self.left_context = args.left_context
         self.right_context = args.right_context
-        self.variable_left_context = getattr(args, "variable_left_context", False)
-        self.encoder_left_context = getattr(args, "encoder_left_context", False)
-        self.left_compression_factor = getattr(args, "left_compression_factor", 1) 
-        self.max_token_count = self.left_compression_factor*self.left_context
-        self.max_segment_count = ceil(self.max_token_count/self.segment_size) + 1
-        self.summarize = torch.nn.AvgPool1d(kernel_size=self.left_compression_factor, stride=self.left_compression_factor, padding=0)
+        self.left_context_method = getattr(args, "left_context_method", None)
+        if self.left_context_method is not None:
+            self.max_token_count = getattr(args, "max_token_count", 0) 
+            self.max_segment_count = ceil(self.max_token_count / self.segment_size)
+            self.shrink_left_context = getattr(args, "shrink_left_context", False)
 
-    def update_memory(self, memory, input):
+        self.summarization_method = args.summarization_method
+        if self.summarization_method == "avg_pool":
+            self.summarize = torch.nn.AdaptiveAvgPool1d(self.left_context)
+        elif self.summarization_method == "max_pool":
+            self.summarize = torch.nn.AdaptiveMaxPool1d(self.left_context)
+        elif self.summarization_method == "linear":
+            self.summarize = torch.nn.Linear(self.segment_size, self.left_context)
+
+    def update_left_banks(self, memory, input):
         if self.right_context != 0:
             input = input[:,:-self.right_context]
 
@@ -632,32 +698,32 @@ class SequenceEncoder_no_sum(FairseqEncoder):
             memory.pop(0)
         return memory
 
-    def add_memory(self, memory, input, src_lengths, old_left_context_size):
-        mem_size = len(memory)
-        if mem_size > 0 and self.left_context != 0:
-            left_context = torch.cat(memory, dim=self.input_time_axis)
-            if old_left_context_size != 0:
-                left_context = left_context[:,:-old_left_context_size]
-            left_context_size = left_context.size(self.input_time_axis)
+    def add_left_context(self, memory, input, mem_size, seg_src_lengths):
+        if mem_size > 0:
+            left_context = memory[0]
 
-            if left_context_size - self.max_token_count > 0:
-                left_context = left_context[:, left_context_size-self.max_token_count:]
-            left_context = self.compress(left_context)
-            left_context_size = left_context.size(self.input_time_axis)
-            src_lengths = src_lengths + left_context_size
-            left_context_size = old_left_context_size + left_context_size
+            for i in range(1, mem_size):
+                segment = memory[i]
+                left_context = torch.cat([left_context] + [segment], dim=self.input_time_axis)
+            
+            left_context_size = left_context.size()[self.input_time_axis]
+        
+            if self.left_context < left_context_size:
+                if left_context_size > self.max_token_count:
+                    left_context = left_context[left_context_size-self.max_token_count:]
+                left_context = left_context.transpose(self.input_time_axis,2)
+                left_context = self.summarize(left_context)
+                left_context = left_context.transpose(self.input_time_axis,2)
+                seg_src_lengths = seg_src_lengths + self.left_context
+                left_context_size = self.left_context
+            else:
+                seg_src_lengths = seg_src_lengths + left_context_size
 
             input = torch.cat([left_context] + [input], dim=self.input_time_axis)
         else:
-            left_context_size = old_left_context_size
+            left_context_size = 0
 
-        return input, src_lengths, left_context_size
-
-    def compress(self, left_context):
-        left_context = left_context.transpose(self.input_time_axis,2)
-        left_context = self.summarize(left_context)
-        left_context = left_context.transpose(self.input_time_axis,2)
-        return left_context   
+        return input, seg_src_lengths, left_context_size 
 
     def forward(
         self,
@@ -666,45 +732,65 @@ class SequenceEncoder_no_sum(FairseqEncoder):
         states=None,
     ):
 
-        seg_src_tokens_lengths = sequence_to_segments(
-            sequence=src_tokens,
-            time_axis=self.input_time_axis,
-            lengths=src_lengths,
-            segment_size=self.segment_size,
-            extra_left_context=0,
-            extra_right_context=self.right_context,
-        )
-
-        left_memory = []
+        if self.left_context_method is not None:
+            left_bank = []
+            seg_src_tokens_lengths = sequence_to_segments(
+                sequence=src_tokens,
+                time_axis=self.input_time_axis,
+                lengths=src_lengths,
+                segment_size=self.segment_size,
+                extra_left_context=0,
+                extra_right_context=self.right_context,
+            )
+        else:
+            left_bank = None
+            seg_src_tokens_lengths = sequence_to_segments(
+                sequence=src_tokens,
+                time_axis=self.input_time_axis,
+                lengths=src_lengths,
+                segment_size=self.segment_size,
+                extra_left_context=self.left_context,
+                extra_right_context=self.right_context,
+            )
+            count = 0
+        
         seg_encoder_states_lengths: List[Tuple[Tensor, Tensor]] = []
 
-        prev_input = None
         for seg_src_tokens, seg_src_lengths in seg_src_tokens_lengths:
-            src_tokens = seg_src_tokens
-            left_context_size = 0
-            if self.variable_left_context:
-                seg_src_tokens_dim = seg_src_tokens.size(self.input_time_axis)
-                if seg_src_tokens_dim < self.segment_size and prev_input is not None:
-                    left_context_size = self.segment_size-seg_src_tokens_dim
-                    prev_input = prev_input[:,self.segment_size-left_context_size:]
-                    seg_src_tokens = torch.cat([prev_input] + [seg_src_tokens], dim=self.input_time_axis)
-                    seg_src_lengths = seg_src_lengths + left_context_size
-            
-            if not self.encoder_left_context:
-                seg_src_tokens, seg_src_lengths, left_context_size = self.add_memory(left_memory, seg_src_tokens, seg_src_lengths, left_context_size)
+            if self.left_context_method is not None:
+                if self.left_context_method == "before_input":
+                    src_tokens = seg_src_tokens
+                    mem_size = len(left_bank)
+                    seg_src_tokens, seg_src_lengths, left_context_size = self.add_left_context(left_bank, seg_src_tokens, mem_size, seg_src_lengths)
+                else:
+                    left_context_size = self.left_context
+                (seg_encoder_states, seg_enc_lengths, left_bank, states) = self.module(
+                        seg_src_tokens,
+                        seg_src_lengths,
+                        left_context_size,
+                        left_bank,
+                        states=states,
+                )
+            else:
+                left = self.left_context - count*self.segment_size
+                if left > 0:
+                    seg_src_tokens = seg_src_tokens[:, left:, :]
+                    seg_src_lengths = seg_src_lengths - left
+                else:
+                    left=0
+                count+=1
 
-            (seg_encoder_states, seg_enc_lengths, states, left_memory) = self.module(
-            seg_src_tokens,
-            seg_src_lengths,
-            left_context_size,
-            states=states,
-            left_memory=left_memory,
-            )
-
+                (seg_encoder_states, seg_enc_lengths, left_bank, states) = self.module(
+                    seg_src_tokens,
+                    seg_src_lengths,
+                    self.left_context - left,
+                    left_bank,
+                    states=states,
+                )
             seg_encoder_states_lengths.append((seg_encoder_states, seg_enc_lengths))
-            if not self.encoder_left_context:
-                left_memory = self.update_memory(left_memory, src_tokens)
-            prev_input = src_tokens
+
+            if self.left_context_method == "before_input":
+                left_bank = self.update_left_banks(left_bank, src_tokens)
 
         encoder_out, enc_lengths = segments_to_sequence(
             segments=seg_encoder_states_lengths, time_axis=self.output_time_axis
@@ -804,6 +890,24 @@ def augmented_memory_no_sum(klass):
                 help="if True, squash memory banks",
             )
             parser.add_argument(
+                "--shrink-mem-bank",
+                action="store_true",
+                default=False,
+                help="if True, average after attention",
+            )
+            parser.add_argument(
+                "--shrink-factor",
+                type=int,
+                default=1,
+                help="Size of mem_bank",
+            )
+            parser.add_argument(
+                "--shrink-depth",
+                type=int,
+                default=0,
+                help="Size of mem_bank",
+            )
+            parser.add_argument(
                 "--max-relative-position",
                 type=int,
                 default=0,
@@ -816,23 +920,17 @@ def augmented_memory_no_sum(klass):
                 help="Summarization method"
             )
             parser.add_argument(
-                "--variable-left-context",
-                action="store_true",
-                default=False,
-                help="if True, squash memory banks",
+                "--left-context-method", 
+                default=None,
+                choices=["after_output", "after_input", "before_input"],
+                help="Summarization method"
             )
             parser.add_argument(
-                "--encoder-left-context",
-                action="store_true",
-                default=False,
-                help="if True, squash memory banks",
-            )
-            parser.add_argument(
-                "--left-compression-factor",
+                "--max-token-count",
                 type=int,
-                default=1,
+                default=-1,
                 help="Right context for the segment.",
             )
-
+            
     StreamSeq2SeqModel.__name__ = klass.__name__
     return StreamSeq2SeqModel
