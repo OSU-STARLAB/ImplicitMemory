@@ -437,8 +437,7 @@ class SequenceEncoder(FairseqEncoder):
         self.segment_size = args.segment_size
         self.left_context = args.left_context
         self.right_context = args.right_context
-        self.variable_left_context = getattr(args, "variable_left_context", True)
-        
+
     def forward(
         self,
         src_tokens: Tensor,
@@ -458,38 +457,21 @@ class SequenceEncoder(FairseqEncoder):
         seg_encoder_states_lengths: List[Tuple[Tensor, Tensor]] = []
 
         count = 0
-        prev_input = None
         for seg_src_tokens, seg_src_lengths in seg_src_tokens_lengths:
-            if self.variable_left_context and self.left_context == 0:
-                seg_src_tokens_dim = seg_src_tokens.size(self.input_time_axis)
-                left_context_size = 0
-                if seg_src_tokens_dim < self.segment_size and prev_input is not None:
-                    left_context_size = self.segment_size-seg_src_tokens_dim
-                    prev_input = prev_input[:,self.segment_size-left_context_size:]
-                    seg_src_tokens = torch.cat([prev_input] + [seg_src_tokens], dim=self.input_time_axis)
-                    seg_src_lengths = seg_src_lengths + left_context_size
-                (seg_encoder_states, seg_enc_lengths, states) = self.module(
+            left = self.left_context - count*self.segment_size
+            if left > 0:
+                seg_src_tokens = seg_src_tokens[:, left:, :]
+                seg_src_lengths = seg_src_lengths - left
+            else:
+                left=0
+            count+=1
+            
+            (seg_encoder_states, seg_enc_lengths, states) = self.module(
                 seg_src_tokens,
                 seg_src_lengths,
-                left_context_size,
+                self.left_context - left,
                 states=states,
-                )
-                prev_input = seg_src_tokens
-            else:
-                left = self.left_context - count*self.segment_size
-                if left > 0:
-                    seg_src_tokens = seg_src_tokens[:, left:, :]
-                    seg_src_lengths = seg_src_lengths - left
-                else:
-                    left=0
-                count+=1
-            
-                (seg_encoder_states, seg_enc_lengths, states) = self.module(
-                    seg_src_tokens,
-                    seg_src_lengths,
-                    self.left_context - left,
-                    states=states,
-                )
+            )
 
             seg_encoder_states_lengths.append((seg_encoder_states, seg_enc_lengths))
 
@@ -576,12 +558,6 @@ def augmented_memory(klass):
                 "--tanh-on-mem",
                 action="store_true",
                 default=False,
-                help="if True, squash memory banks",
-            )
-            parser.add_argument(
-                "--variable-left-context",
-                action="store_true",
-                default=True,
                 help="if True, squash memory banks",
             )
 
