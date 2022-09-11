@@ -20,30 +20,15 @@ from fairseq.models.speech_to_text.modules.augmented_memory_attention import (
     SequenceEncoder,
     AugmentedMemoryConvTransformerEncoder,
 )
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_query_size import (
-    augmented_memory_query_size,
-    SequenceEncoder_query_size,
-    AugmentedMemoryConvTransformerEncoder_query_size,
-)
 from fairseq.models.speech_to_text.modules.augmented_memory_attention_no_sum import (
     augmented_memory_no_sum,
     SequenceEncoder_no_sum,
     AugmentedMemoryConvTransformerEncoder_no_sum,
 )
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_fill_sum import (
-    augmented_memory_fill_sum,
-    SequenceEncoder_fill_sum,
-    AugmentedMemoryConvTransformerEncoder_fill_sum,
-)
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_fill_sum_left import (
-    augmented_memory_fill_sum_left,
-    SequenceEncoder_fill_sum_left,
-    AugmentedMemoryConvTransformerEncoder_fill_sum_left,
-)
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_fill_sum_leftV2 import (
-    augmented_memory_fill_sum_leftV2,
-    SequenceEncoder_fill_sum_leftV2,
-    AugmentedMemoryConvTransformerEncoder_fill_sum_leftV2,
+from fairseq.models.speech_to_text.modules.augmented_memory_attention_test import (
+    augmented_memory_test,
+    SequenceEncoder_test,
+    AugmentedMemoryConvTransformerEncoder_test,
 )
 
 from torch import nn, Tensor
@@ -128,27 +113,6 @@ class AugmentedMemoryConvTransformerModel(SimulConvTransformerModel):
 def augmented_memory_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
-#Query_Size Augmented Memory Transormer
-@register_model("convtransformer_augmented_memory_query_size")
-@augmented_memory_query_size
-class AugmentedMemoryConvTransformerModel_query_size(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_query_size(args, AugmentedMemoryConvTransformerEncoder_query_size(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_query_size", "convtransformer_augmented_memory_query_size"
-)
-def augmented_memory_query_size_convtransformer_espnet(args):
-    convtransformer_espnet(args)
-
 #No_Sum Augmented Memory Transormer
 @register_model("convtransformer_augmented_memory_no_sum")
 @augmented_memory_no_sum
@@ -170,13 +134,13 @@ class AugmentedMemoryConvTransformerModel_no_sum(SimulConvTransformerModel):
 def augmented_memory_no_sum_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
-#Fill_Sum Augmented Memory Transormer
-@register_model("convtransformer_augmented_memory_fill_sum")
-@augmented_memory_fill_sum
-class AugmentedMemoryConvTransformerModel_fill_sum(SimulConvTransformerModel):
+#Test Augmented Memory Transormer
+@register_model("convtransformer_augmented_memory_test")
+@augmented_memory_test
+class AugmentedMemoryConvTransformerModel_test(SimulConvTransformerModel):
     @classmethod
     def build_encoder(cls, args):
-        encoder = SequenceEncoder_fill_sum(args, AugmentedMemoryConvTransformerEncoder_fill_sum(args))
+        encoder = SequenceEncoder_test(args, AugmentedMemoryConvTransformerEncoder_test(args))
 
         if getattr(args, "load_pretrained_encoder_from", None) is not None:
             encoder = checkpoint_utils.load_pretrained_component_from_model(
@@ -186,52 +150,11 @@ class AugmentedMemoryConvTransformerModel_fill_sum(SimulConvTransformerModel):
         return encoder
 
 @register_model_architecture(
-    "convtransformer_augmented_memory_fill_sum", "convtransformer_augmented_memory_fill_sum"
+    "convtransformer_augmented_memory_test", "convtransformer_augmented_memory_test"
 )
-def augmented_memory_fill_sum_convtransformer_espnet(args):
+def augmented_memory_test_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
-#Fill_Sum_left Augmented Memory Transormer
-@register_model("convtransformer_augmented_memory_fill_sum_left")
-@augmented_memory_fill_sum_left
-class AugmentedMemoryConvTransformerModel_fill_sum_left(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_fill_sum_left(args, AugmentedMemoryConvTransformerEncoder_fill_sum_left(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_fill_sum_left", "convtransformer_augmented_memory_fill_sum_left"
-)
-
-def augmented_memory_fill_sum_left_convtransformer_espnet(args):
-    convtransformer_espnet(args)
-#Fill_Sum_leftV2 Augmented Memory Transormer
-@register_model("convtransformer_augmented_memory_fill_sum_leftV2")
-@augmented_memory_fill_sum_leftV2
-class AugmentedMemoryConvTransformerModel_fill_sum_leftV2(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_fill_sum_leftV2(args, AugmentedMemoryConvTransformerEncoder_fill_sum_leftV2(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_fill_sum_leftV2", "convtransformer_augmented_memory_fill_sum_leftV2"
-)
-def augmented_memory_fill_sum_leftV2_convtransformer_espnet(args):
-    convtransformer_espnet(args)
 # ============================================================================ #
 #   Convtransformer
 #   with monotonic attention decoder

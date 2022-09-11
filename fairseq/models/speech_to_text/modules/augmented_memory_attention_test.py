@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from math import ceil
+from turtle import left
 from typing import Tuple, List
 
 import torch
@@ -46,7 +47,7 @@ class RelativePositionEmbedding(nn.Module):
         output = nn.functional.embedding(input.long(), self.embeddings)
         return output
 
-class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
+class AugmentedMemoryConvTransformerEncoder_test(ConvTransformerEncoder):
     def __init__(self, args):
         super().__init__(args)
 
@@ -74,7 +75,6 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
 
         self.share_mem_bank_layers = args.share_mem_bank_layers
         self.max_relative_position = getattr(args, "max_relative_position", 0)
-        self.mem_bank_size = args.mem_bank_size
         self.max_memory_size = args.max_memory_size
 
         self.variable_left_context_method = getattr(args, "variable_left_context_method", None)
@@ -105,7 +105,7 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
 
         seq_len, bsz, x_dim = input.shape
 
-        query_ranges = torch.arange(0, seq_len)
+        query_ranges = torch.arange(0, seq_len+1)
         key_ranges = torch.arange(-mem_size, seq_len)
         
         distance = key_ranges[None, :] - query_ranges[:, None] 
@@ -119,9 +119,7 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
     def get_membank_len(self, memory):
         if self.max_memory_size > -1 and len(memory) > self.max_memory_size:
             memory = memory[-self.max_memory_size :]
-        num_banks = len(memory)
-        length = num_banks*self.mem_bank_size
-        return length 
+        return len(memory)
 
     def update_memory(self, memory, input):
         memory.append(input)
@@ -246,7 +244,6 @@ class AugmentedMemoryConvTransformerEncoder_no_sum(ConvTransformerEncoder):
 
         return states[-1]["encoder_states"], lengths, states, left_memory, states[-1]["encoder_states"]
 
-
 # ------------------------------------------------------------------------------
 #   AugmentedMemoryTransformerEncoderLayer
 # ------------------------------------------------------------------------------
@@ -256,66 +253,35 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
         self.left_context = args.left_context // args.encoder_stride
         self.right_context = args.right_context // args.encoder_stride
-        self.segment_size = args.segment_size // args.encoder_stride
+        self.increase_context = args.increase_context
 
         self.share_mem_bank_layers = args.share_mem_bank_layers
-        self.mem_bank_after = getattr(args, "mem_bank_after", False)
 
-        self.mem_bank_size = args.mem_bank_size
-        self.summarization_method = getattr(args, "summarization_method", "avg_pool")
-        if self.summarization_method == "avg_pool":
-            self.module = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
-        elif self.summarization_method == "max_pool":
-            self.module = torch.nn.AdaptiveMaxPool1d(self.mem_bank_size)
-        elif self.summarization_method == "linear":
-            self.module = torch.nn.Linear(self.segment_size, self.mem_bank_size)
+    def forward(self, x, state, layer_num, rpe, new_left_context):
+        self.left_context = new_left_context
 
-        self.max_memory_size = args.max_memory_size
-        self.increase_context = args.increase_context
-        self.tanh_on_mem = getattr(args, "tanh_on_mem", False)
-        if self.tanh_on_mem:
-            self.squash_mem = torch.tanh
-            self.nonlinear_squash_mem = True
-        else:
-            self.squash_mem = lambda x: x
-            self.nonlinear_squash_mem = False
-        
+        length, batch_size, x_dim = x.size()
 
-    def update_mem_banks(self, state, input, layer_num):
-        length, _, _ = input.size()
-        if self.segment_size == length - (self.left_context + self.right_context):
-            if self.increase_context:
-                segment = input[0:length]
-            else:
-                segment = input[self.left_context:length-self.right_context]
-
-            segment = segment.transpose(0,2)
-            next_m = self.module(segment)
-            next_m = next_m.transpose(0,2)
-
-            if self.share_mem_bank_layers is not None:
-                if not any(layer_num in layer for layer in self.share_mem_bank_layers):
-                    next_m = self.squash_mem(next_m)
-                    state["memory_banks"].append(next_m)
-                else:
-                    for pairs in self.share_mem_bank_layers:
-                        if layer_num == pairs[0]:
-                            next_m = self.squash_mem(next_m)
-                            state["memory_banks"].append(next_m)        
-            else:
-                next_m = self.squash_mem(next_m)
-                state["memory_banks"].append(next_m) 
-        return state
-        
-    def forward(self, x, state, layer_num, rpe, left_context):
-        self.left_context = left_context
-        
         residual = x
 
         if self.normalize_before:
             x = self.self_attn_layer_norm(x)
 
-        x = self.self_attn(input=x, state=state, layer_num=layer_num, rpe=rpe)
+        # TODO reseach new sum_query method
+        if self.increase_context:
+            seg_start = 0
+        else:
+            seg_start = self.left_context
+        seg_end = length - self.right_context
+
+        if seg_start < seg_end:
+            summarization_query = torch.mean(x[seg_start:seg_end], keepdim=True, dim=0)
+        else:
+            summarization_query = x.new_zeros(1, batch_size, x_dim)
+
+        x = torch.cat([x, summarization_query], dim=0)
+
+        x = self.self_attn(input_and_summary=x, state=state, layer_num=layer_num, rpe=rpe)
 
         x = self.dropout_module(x)
 
@@ -336,9 +302,6 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
         if not self.normalize_before:
             x = self.final_layer_norm(x)
 
-        if self.max_memory_size != 0 and self.mem_bank_after:
-            state = self.update_mem_banks(state, x, layer_num)
-
         return x
 
     def build_self_attention(self, embed_dim, args):
@@ -349,17 +312,10 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             self_attention=True,
             q_noise=self.quant_noise,
             qn_block_size=self.quant_noise_block_size,
-            tanh_on_mem=getattr(args, "tanh_on_mem", False),
+            tanh_on_mem=getattr(args, "tanh-on-mem", False),
             max_memory_size=args.max_memory_size,
             share_mem_bank_layers=args.share_mem_bank_layers,
-            mem_bank_size=args.mem_bank_size,
-            left_context=args.left_context // args.encoder_stride,
-            right_context=args.right_context // args.encoder_stride,
-            increase_context=args.increase_context,
-            mem_bank_after=getattr(args, "mem_bank_after", False),
-            max_relative_position=getattr(args, "max_relative_position", 0),
-            segment_size=args.segment_size // args.encoder_stride,
-            summarization_method=getattr(args, "summarization_method", "avg_pool"),
+            max_relative_position=getattr(args, "max_relative_position", 0)
         )
 
 
@@ -392,15 +348,9 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         memory_dim=None,
         std_scale=0.5,  # 0.5 based on https://arxiv.org/abs/2005.09137
         max_memory_size=-1,
+        disable_mem_on_mem_attn=True,
         share_mem_bank_layers=None,
-        mem_bank_size=1,
-        left_context=0,
-        right_context=0,
-        increase_context=False,
-        mem_bank_after=False,
         max_relative_position=0,
-        segment_size=0,
-        summarization_method="avg_pool"
     ):
         super().__init__(
             embed_dim,
@@ -419,6 +369,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 
         self.memory_dim = memory_dim if memory_dim is not None else embed_dim
         self.std_scale = std_scale
+        self.disable_mem_on_mem_attn = disable_mem_on_mem_attn
 
         # This Operator was used for factorization in PySpeech
         self.v2e = lambda x: x
@@ -433,23 +384,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         self.max_memory_size = max_memory_size
 
         self.share_mem_bank_layers = share_mem_bank_layers
-        self.mem_bank_size = mem_bank_size
-        self.left_context = left_context
-        self.right_context = right_context
-        self.increase_context = increase_context
-        self.segment_size = segment_size
-        
-        self.mem_bank_size = mem_bank_size
-        self.mem_bank_after = mem_bank_after
 
-        self.summarization_method = summarization_method
-        if self.summarization_method == "avg_pool":
-            self.module = torch.nn.AdaptiveAvgPool1d(self.mem_bank_size)
-        elif self.summarization_method == "max_pool":
-            self.module = torch.nn.AdaptiveMaxPool1d(self.mem_bank_size)
-        elif self.summarization_method == "linear":
-            self.module = torch.nn.Linear(self.segment_size, self.mem_bank_size)
-        
         if max_relative_position > 0:
             self.use_rpe = True
             self.rpe_k = RelativePositionEmbedding(
@@ -465,40 +400,34 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             self.rpe_k = None
             self.rpe_v = None
 
-    def update_mem_banks(self, state, input, layer_num):
-        length, _, _ = input.size()
-        if self.segment_size == length - (self.left_context + self.right_context):
-            if self.increase_context:
-                segment = input[0:length]
-            else:
-                segment = input[self.left_context:length-self.right_context]
-            
-            segment = segment.transpose(0,2)
-            next_m = self.module(segment)
-            next_m = next_m.transpose(0,2)
 
-            if self.share_mem_bank_layers is not None:
-                if not any(layer_num in layer for layer in self.share_mem_bank_layers):
+    def update_mem_banks(self, state, output_and_memory, layer_num):
+        if self.share_mem_bank_layers is not None:
+          if not any(layer_num in layer for layer in self.share_mem_bank_layers):
+            next_m = output_and_memory[-1:]
+            next_m = self.squash_mem(next_m)
+            state["memory_banks"].append(next_m)
+          else:
+            for pairs in self.share_mem_bank_layers:
+                if layer_num == pairs[0]:
+                    next_m = output_and_memory[-1:]
                     next_m = self.squash_mem(next_m)
-                    state["memory_banks"].append(next_m)
-                else:
-                    for pairs in self.share_mem_bank_layers:
-                        if layer_num == pairs[0]:
-                            next_m = self.squash_mem(next_m)
-                            state["memory_banks"].append(next_m)        
-            else:
-                next_m = self.squash_mem(next_m)
-                state["memory_banks"].append(next_m) 
+                    state["memory_banks"].append(next_m)        
+        else:
+            next_m = output_and_memory[-1:]
+            next_m = self.squash_mem(next_m)
+            state["memory_banks"].append(next_m) 
         return state
 
-    def forward(self, input, state, layer_num, rpe):
+    def forward(self, input_and_summary, state, layer_num, rpe):
         """
         input: Encoder states of current segment with left or right context,
             plus one summarization query
 
         """
 
-        length, batch_size, _ = input.shape
+        length, batch_size, _ = input_and_summary.shape
+        length = length - 1  # not include sum_query, last index
 
         memory = state["memory_banks"]
         # TODO: positional embedding on memory
@@ -506,13 +435,11 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         if self.max_memory_size > -1 and len(memory) > self.max_memory_size:
             memory = memory[-self.max_memory_size :]
             state["memory_banks"] = memory
-        
-        mem_bank_len = len(memory)*self.mem_bank_size
 
-        memory_and_input = torch.cat(memory + [input], dim=0)
-        input_query = input
+        memory_and_input = torch.cat(memory + [input_and_summary[:-1]], dim=0)
+        input_and_sum_query = input_and_summary
 
-        q = self.q_proj(self.v2e(input_query))
+        q = self.q_proj(self.v2e(input_and_sum_query))
         k = self.k_proj(self.v2e(memory_and_input))
         v = self.v_proj(self.v2e(memory_and_input))
 
@@ -535,7 +462,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         )
 
         attention_weights = torch.bmm(q, k.transpose(1, 2))
-       
+        
         if self.use_rpe and rpe is not None and self.rpe_k is not None:
             r_k = self.rpe_k(rpe)
             # [q, B*h, d] * [q, k, d] -> [B*h, q, k]
@@ -544,13 +471,18 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             ).transpose(0, 1)
             attention_weights = attention_weights + attention_weights_rpe
 
+        if self.disable_mem_on_mem_attn:
+            attention_weights = self.suppress_mem_on_mem_attention(
+                batch_size, self.num_heads, len(memory), attention_weights
+            )
+       
         if self.std_scale is not None:
             attention_weights = attention_suppression(attention_weights, self.std_scale)
        
         assert list(attention_weights.shape) == [
             batch_size * self.num_heads,
-            length,
-            length + mem_bank_len,
+            length + 1,
+            length + len(memory),
         ]
 
         attention_weights = torch.nn.functional.softmax(
@@ -569,31 +501,49 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             ).transpose(0, 1)
 
             attention = attention + attention_rpe
-                
+
         assert list(attention.shape) == [
             batch_size * self.num_heads,
-            length,
+            length + 1,
             self.head_dim,
         ]
 
         attention = (
             attention.transpose(0, 1)
             .contiguous()
-            .view(length, batch_size, self.embed_dim)
+            .view(length + 1, batch_size, self.embed_dim)
         )
         
-        output = self.out_proj(attention)
+        output_and_memory = self.out_proj(attention)
         
-        if self.max_memory_size != 0 and not self.mem_bank_after:
-            state = self.update_mem_banks(state, input, layer_num)
+        output = output_and_memory[:-1]
+        
+        if self.max_memory_size != 0:
+            state = self.update_mem_banks(state, output_and_memory, layer_num)
 
         return output
+
+    def suppress_mem_on_mem_attention(
+        self, B: int, num_heads: int, mem_size: int, attention_weight: Tensor
+    ):
+        """
+        Arguments:
+            - B: batch size
+            - num_heads: number of attention heads
+            - mem_size: size of memory bank
+            - attention_weight: a [B*num_heads, T + 1, T + mem_size] vector
+
+        Return:
+            modified attention_weight with [B*num_heads, -1, :mem_size] = -inf
+        """
+        attention_weight[:, -1, :mem_size] = float("-inf")
+        return attention_weight
 
 
 # ------------------------------------------------------------------------------
 #   SequenceEncoder
 # ------------------------------------------------------------------------------
-class SequenceEncoder_no_sum(FairseqEncoder):
+class SequenceEncoder_test(FairseqEncoder):
     """
     SequenceEncoder encodes sequences.
 
@@ -757,7 +707,7 @@ class SequenceEncoder_no_sum(FairseqEncoder):
 # ------------------------------------------------------------------------------
 #   Augmented memory model decorator
 # ------------------------------------------------------------------------------
-def augmented_memory_no_sum(klass):
+def augmented_memory_test(klass):
     class StreamSeq2SeqModel(klass):
         @staticmethod
         def add_args(parser):
@@ -796,34 +746,10 @@ def augmented_memory_no_sum(klass):
                 help=":The list of memory bank sharing layers",
             )
             parser.add_argument(
-                "--mem-bank-size",
-                type=int,
-                default=1,
-                help="Size of mem_bank",
-            )
-            parser.add_argument(
-                "--mem-bank-after",
-                action="store_true",
-                default=False,
-                help="if True, average after attention",
-            )
-            parser.add_argument(
                 "--tanh-on-mem",
                 action="store_true",
                 default=False,
                 help="if True, squash memory banks",
-            )
-            parser.add_argument(
-                "--max-relative-position",
-                type=int,
-                default=0,
-                help="Relative Position",
-            )
-            parser.add_argument(
-                "--summarization-method", 
-                default="avg_pool",
-                choices=["avg_pool", "max_pool", "linear"],
-                help="Summarization method"
             )
             parser.add_argument(
                 "--variable-left-context-method",
@@ -842,6 +768,12 @@ def augmented_memory_no_sum(klass):
                 type=int,
                 default=1,
                 help="Right context for the segment.",
+            )
+            parser.add_argument(
+                "--max-relative-position",
+                type=int,
+                default=0,
+                help="Relative Position",
             )
 
     StreamSeq2SeqModel.__name__ = klass.__name__
