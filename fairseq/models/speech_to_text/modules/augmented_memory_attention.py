@@ -581,9 +581,6 @@ class SequenceEncoder(FairseqEncoder):
         self.summarize = torch.nn.AvgPool1d(kernel_size=self.left_compression_factor, stride=self.left_compression_factor, padding=0)
 
     def update_memory(self, memory, input):
-        if self.right_context != 0:
-            input = input[:,:-self.right_context]
-
         memory.append(input)
 
         if len(memory) > self.max_segment_count:
@@ -640,11 +637,13 @@ class SequenceEncoder(FairseqEncoder):
         prev_output = None
         for seg_src_tokens, seg_src_lengths in seg_src_tokens_lengths:
             src_tokens = seg_src_tokens
+            if self.right_context != 0:
+                src_tokens = src_tokens[:,:-self.right_context]
             left_context_size = 0
             if self.variable_left_context_method == "input":
                 seg_src_tokens_dim = seg_src_tokens.size(self.input_time_axis)
-                if seg_src_tokens_dim < self.segment_size and prev_input is not None:
-                    left_context_size = self.segment_size-seg_src_tokens_dim
+                if seg_src_tokens_dim < self.segment_size + self.right_context and prev_input is not None:
+                    left_context_size = self.segment_size + self.right_context - seg_src_tokens_dim
                     prev_input = prev_input[:,self.segment_size-left_context_size:]
                     seg_src_tokens = torch.cat([prev_input] + [seg_src_tokens], dim=self.input_time_axis)
                     seg_src_lengths = seg_src_lengths + left_context_size

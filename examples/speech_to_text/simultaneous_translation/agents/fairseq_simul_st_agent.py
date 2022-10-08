@@ -210,8 +210,6 @@ class FairseqSimulSTAgent(SpeechAgent):
                             help="Wait-k delay for evaluation")
         parser.add_argument("--arch", type=str, default=None,
                             help="Architecture")
-        parser.add_argument("--encoder-left-context", default=False, action="store_true",
-                            help="Encoder left context")
         parser.add_argument("--flush-method", type=str, default="none",
                             help="Method used to flush state after each sentence and enable more continuous operation.")
 
@@ -243,9 +241,6 @@ class FairseqSimulSTAgent(SpeechAgent):
             state["cfg"]["model"].arch = args.arch
             state["cfg"]["model"]._name = args.arch
             state["cfg"]["task"].arch = args.arch
-        
-        if args.encoder_left_context is not None:
-            state["cfg"]["model"].encoder_left_context = args.encoder_left_context
 
         task = tasks.setup_task(task_args)
 
