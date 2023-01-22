@@ -37,6 +37,7 @@ class TransformerEncoderLayerBase(nn.Module):
         self.cfg = cfg
         self.return_fc = return_fc
         self.embed_dim = cfg.encoder.embed_dim
+        self.encoder_ffn_embed_dim = cfg.encoder.ffn_embed_dim
         self.quant_noise = cfg.quant_noise.pq
         self.quant_noise_block_size = cfg.quant_noise.pq_block_size
         self.self_attn = self.build_self_attention(self.embed_dim, cfg)

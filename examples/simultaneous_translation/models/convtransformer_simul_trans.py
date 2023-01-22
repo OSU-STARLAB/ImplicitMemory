@@ -25,6 +25,11 @@ from fairseq.models.speech_to_text.modules.augmented_memory_attention_test impor
     SequenceEncoder_test,
     AugmentedMemoryConvTransformerEncoder_test,
 )
+from fairseq.models.speech_to_text.modules.augmented_memory_attention_XL import (
+    augmented_memory_XL,
+    SequenceEncoder_XL,
+    AugmentedMemoryConvTransformerEncoder_XL,
+)
 
 from torch import nn, Tensor
 from typing import Dict, List
@@ -129,6 +134,26 @@ class AugmentedMemoryConvTransformerModel_test(SimulConvTransformerModel):
 def augmented_memory_test_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
+#XL Augmented Memory Transormer
+@register_model("convtransformer_augmented_memory_XL")
+@augmented_memory_XL
+class AugmentedMemoryConvTransformerModel_XL(SimulConvTransformerModel):
+    @classmethod
+    def build_encoder(cls, args):
+        encoder = SequenceEncoder_XL(args, AugmentedMemoryConvTransformerEncoder_XL(args))
+
+        if getattr(args, "load_pretrained_encoder_from", None) is not None:
+            encoder = checkpoint_utils.load_pretrained_component_from_model(
+                component=encoder, checkpoint=args.load_pretrained_encoder_from
+            )
+
+        return encoder
+
+@register_model_architecture(
+    "convtransformer_augmented_memory_XL", "convtransformer_augmented_memory_XL"
+)
+def augmented_memory_XL_convtransformer_espnet(args):
+    convtransformer_espnet(args)
 # ============================================================================ #
 #   Convtransformer
 #   with monotonic attention decoder

@@ -212,9 +212,53 @@ class FairseqSimulSTAgent(SpeechAgent):
                             help="Architecture")
         parser.add_argument("--flush-method", type=str, default="none",
                             help="Method used to flush state after each sentence and enable more continuous operation.")
+        parser.add_argument("--change-model", default=False, action="store_true",
+                            help="Changes the model hyperparameters")
+        parser.add_argument(
+            "--variable-left-context-method", choices=["input", "output"], default=None, help="Summarization method"
+        )
+        parser.add_argument(
+            "--shift-right-context", action="store_true", default=None, help="if True, squash memory banks",
+        )
+        parser.add_argument(
+            "--encoder-left-context", action="store_true", default=None, help="if True, squash memory banks",
+        )
+        parser.add_argument(
+            "--segment-size", type=int, default=None, help="Length of the segment."
+        )
+        parser.add_argument(
+            "--left-context", type=int, default=None, help="Left context for the segment.",
+        )
+        parser.add_argument(
+            "--right-context", type=int, default=None, help="Right context for the segment.",
+        )
+        parser.add_argument(
+            "--max-memory-size", type=int, default=None, help="Right context for the segment.",
+        )
 
         # fmt: on
         return parser
+
+    def change_model_parameters(self, args, state):
+        if args.arch is not None:
+            state["cfg"]["model"].arch = args.arch
+            state["cfg"]["model"]._name = args.arch
+            state["cfg"]["task"].arch = args.arch
+        if args.left_context is not None: 
+            state["cfg"]["model"].left_context = args.left_context
+        if args.right_context is not None:
+            state["cfg"]["model"].right_context = args.right_context
+        if args.segment_size is not None:
+            state["cfg"]["model"].segment_size = args.segment_size
+        if args.variable_left_context_method is not None:
+            state["cfg"]["model"].variable_left_context_method = args.variable_left_context_method
+        if args.encoder_left_context is not None:
+            state["cfg"]["model"].encoder_left_context = args.encoder_left_context
+        if args.shift_right_context is not None:
+            state["cfg"]["model"].shift_right_context = args.shift_right_context
+        if args.max_memory_size is not None:
+            state["cfg"]["model"].max_memory_size = args.max_memory_size
+        return state
 
     def load_model_vocab(self, args):
 
@@ -223,6 +267,9 @@ class FairseqSimulSTAgent(SpeechAgent):
             raise IOError("Model file not found: {}".format(filename))
 
         state = checkpoint_utils.load_checkpoint_to_cpu(filename)
+
+        if args.change_model:
+            state = self.change_model_parameters(args, state)
 
         task_args = state["cfg"]["task"]
         task_args.data = args.data_bin
@@ -235,12 +282,6 @@ class FairseqSimulSTAgent(SpeechAgent):
             self.waitk_lagging = args.waitk
         else:
             self.waitk_lagging = state["cfg"]["model"].waitk_lagging
-
-        if args.arch is not None:
-            task_args.arch = args.arch
-            state["cfg"]["model"].arch = args.arch
-            state["cfg"]["model"]._name = args.arch
-            state["cfg"]["task"].arch = args.arch
 
         task = tasks.setup_task(task_args)
 

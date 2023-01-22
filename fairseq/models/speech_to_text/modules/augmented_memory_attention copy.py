@@ -586,6 +586,7 @@ class SequenceEncoder(FairseqEncoder):
         self.max_segment_count = ceil(self.max_token_count/self.segment_size) + 2
         self.summarize = torch.nn.AvgPool1d(kernel_size=self.left_compression_factor, stride=self.left_compression_factor, padding=0)
         self.shift_right_context = getattr(args, "shift_right_context", False)
+        self.shift_left_context = getattr(args, "shift_left_context", False)
 
     def update_memory(self, memory, input):
         memory.append(input)
@@ -822,6 +823,12 @@ def augmented_memory(klass):
             )
             parser.add_argument(
                 "--shift-right-context",
+                action="store_true",
+                default=False,
+                help="if True, squash memory banks",
+            )
+            parser.add_argument(
+                "--shift-left-context",
                 action="store_true",
                 default=False,
                 help="if True, squash memory banks",
