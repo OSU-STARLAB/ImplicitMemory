@@ -1,0 +1,11 @@
+
+The following have been reloaded with a version change:
+  1) gcc/12.1 => gcc/11.2
+
+
+The following have been reloaded with a version change:
+  1) cuda/11.4 => cuda/11.6
+
+/nfs/hpc/share/raffelm/research/fairseq/fairseq/utils.py:374: UserWarning: amp_C fused kernels unavailable, disabling multi_tensor_l2norm; you may get better performance by installing NVIDIA's apex library
+  warnings.warn(
+slurmstepd: error: *** JOB 777159 ON cn-gpu5 CANCELLED AT 2023-01-20T10:21:30 ***

@@ -11,8 +11,12 @@ import shutil
 from tempfile import NamedTemporaryFile
 from typing import Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import torchaudio
+import multiprocessing
+import traceback
+import time
 from examples.speech_to_text.data_utils import (
     create_zip,
     extract_fbank_features,
@@ -22,7 +26,9 @@ from examples.speech_to_text.data_utils import (
     get_zip_manifest,
     load_df_from_tsv,
     save_df_to_tsv,
+    cal_gcmvn_stats,
 )
+from torch import cat
 from torch import Tensor
 from torch.utils.data import Dataset
 from torchaudio.datasets.utils import download_url, extract_archive
@@ -34,6 +40,7 @@ log = logging.getLogger(__name__)
 
 MANIFEST_COLUMNS = ["id", "audio", "n_frames", "tgt_text", "speaker"]
 
+print_lock = multiprocessing.Lock()
 
 class CoVoST(Dataset):
     """Create a Dataset for CoVoST (https://github.com/facebookresearch/covost).
@@ -182,12 +189,11 @@ class CoVoST(Dataset):
         sentence = data["sentence"]
         translation = None if self.no_translation else data["translation"]
         speaker_id = data["client_id"]
-        _id = data["path"].replace(".mp3", "")
+        _id = data["path"].replace(".wav", "")
         return waveform, sample_rate, sentence, translation, speaker_id, _id
 
     def __len__(self) -> int:
         return len(self.data)
-
 
 def process(args):
     root = Path(args.data_root).absolute() / args.src_lang
@@ -200,10 +206,24 @@ def process(args):
         print(f"Fetching split {split}...")
         dataset = CoVoST(root, split, args.src_lang, args.tgt_lang)
         print("Extracting log mel filter bank features...")
+        if split == 'train' and args.cmvn_type == "global":
+            gcmvn_feature_list = []
+            print("And estimating cepstral mean and variance stats...", flush=True)
+
         for waveform, sample_rate, _, _, _, utt_id in tqdm(dataset):
-            extract_fbank_features(
-                waveform, sample_rate, feature_root / f"{utt_id}.npy"
+            features = extract_fbank_features(
+                waveform, sample_rate, feature_root / f"{utt_id}.npy", noise_gate=7000, similarity_threshold=0.9985,
             )
+            if split == 'train' and args.cmvn_type == "global":
+                if (len(gcmvn_feature_list) < args.gcmvn_max_num) and (features is not None):
+                    gcmvn_feature_list.append(features)
+        
+        if split == 'train' and args.cmvn_type == "global":
+            # Estimate and save cmv
+            stats = cal_gcmvn_stats(gcmvn_feature_list)
+            with open(root / "gcmvn.npz", "wb") as f:
+                np.savez(f, mean=stats["mean"], std=stats["std"])
+
     # Pack features into ZIP
     zip_path = root / "fbank80.zip"
     print("ZIPing features...")
@@ -241,14 +261,18 @@ def process(args):
             Path(f.name),
             root / spm_filename_prefix,
             args.vocab_type,
-            args.vocab_size
+            args.vocab_size,
         )
     # Generate config YAML
     gen_config_yaml(
         root,
         spm_filename=spm_filename_prefix + ".model",
         yaml_filename=f"config_{task}.yaml",
-        specaugment_policy="lb",
+        specaugment_policy="st",
+        cmvn_type=args.cmvn_type,
+        gcmvn_path=(
+            root / "gcmvn.npz" if args.cmvn_type == "global" else None
+        ),
     )
     # Clean up
     shutil.rmtree(feature_root)
@@ -267,10 +291,20 @@ def main():
         type=str,
         choices=["bpe", "unigram", "char"],
     ),
+    parser.add_argument("--cmvn-type", default="utterance",
+                        choices=["global", "utterance"],
+                        help="The type of cepstral mean and variance normalization")
+    parser.add_argument("--gcmvn-max-num", default=150000, type=int,
+                        help=(
+                            "Maximum number of sentences to use to estimate"
+                            "global mean and variance"
+                            ))
     parser.add_argument("--vocab-size", default=1000, type=int)
     parser.add_argument("--src-lang", "-s", required=True, type=str)
     parser.add_argument("--tgt-lang", "-t", type=str)
     args = parser.parse_args()
+
+    print(f"Args: {args}", flush=True)
 
     process(args)
 

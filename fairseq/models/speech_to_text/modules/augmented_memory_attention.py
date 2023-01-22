@@ -20,6 +20,7 @@ from fairseq.models.speech_to_text.utils import (
 )
 from fairseq.modules import MultiheadAttention, TransformerEncoderLayer
 from torch import nn, Tensor
+import time
 import json
 
 # ------------------------------------------------------------------------------
@@ -321,7 +322,8 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             tanh_on_mem=getattr(args, "tanh-on-mem", False),
             max_memory_size=args.max_memory_size,
             share_mem_bank_layers=getattr(args, "share_mem_bank_layers", None),
-            max_relative_position=getattr(args, "max_relative_position", 0)
+            max_relative_position=getattr(args, "max_relative_position", 0),
+            disable_suppression=getattr(args, "disable_suppression", False),
         )
 
 
@@ -352,7 +354,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         qn_block_size=8,
         tanh_on_mem=False,
         memory_dim=None,
-        std_scale=0.5,  # 0.5 based on https://arxiv.org/abs/2005.09137
+        disable_suppression=False,  # 0.5 based on https://arxiv.org/abs/2005.09137
         max_memory_size=-1,
         disable_mem_on_mem_attn=True,
         share_mem_bank_layers=None,
@@ -374,7 +376,10 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         )
 
         self.memory_dim = memory_dim if memory_dim is not None else embed_dim
-        self.std_scale = std_scale
+        if disable_suppression:
+            self.std_scale = None
+        else:
+            self.std_scale = 0.5
         self.disable_mem_on_mem_attn = disable_mem_on_mem_attn
 
         # This Operator was used for factorization in PySpeech
@@ -586,6 +591,8 @@ class SequenceEncoder(FairseqEncoder):
         self.max_segment_count = ceil(self.max_token_count/self.segment_size) + 2
         self.summarize = torch.nn.AvgPool1d(kernel_size=self.left_compression_factor, stride=self.left_compression_factor, padding=0)
         self.shift_right_context = getattr(args, "shift_right_context", False)
+        self.shift_left_context = getattr(args, "shift_left_context", False)
+        self.record_forward_time = getattr(args, "record_forward_time", False)
 
     def update_memory(self, memory, input):
         memory.append(input)
@@ -685,11 +692,26 @@ class SequenceEncoder(FairseqEncoder):
                     left_context_size = left_context_size + prev_input_tmp_size
                     seg_src_tokens = torch.cat([prev_input_tmp]+[seg_src_tokens], dim=self.input_time_axis)
 
-                cur_seg_count += 1
+            #Fill in additional space for left context with right context 
+            if self.shift_left_context and self.left_context != 0 and prev_input is None and total_seg_count > cur_seg_count+1:
+                future_seg_src_tokens = seg_src_tokens_lengths[cur_seg_count+1][0][:, right_context_size:]
+                #Provides additional right context in case of not having enough
+                if future_seg_src_tokens.size(self.input_time_axis) < self.left_context and total_seg_count > cur_seg_count+2:
+                    future_seg_src_tokens = torch.cat([future_seg_src_tokens] + [seg_src_tokens_lengths[cur_seg_count+2]])
+                    
+                if future_seg_src_tokens.size(self.input_time_axis) > self.left_context:
+                    future_seg_src_tokens = future_seg_src_tokens[:, :-(future_seg_src_tokens.size(self.input_time_axis)-self.left_context)]
+                right_context_size = right_context_size + future_seg_src_tokens.size(self.input_time_axis)
+                seg_src_lengths = seg_src_lengths + right_context_size
+                seg_src_tokens = torch.cat([seg_src_tokens] + [future_seg_src_tokens], dim=self.input_time_axis)
+                
+            cur_seg_count += 1
             
             if not self.encoder_left_context:
                 seg_src_tokens, seg_src_lengths, left_context_size = self.add_memory(left_memory, seg_src_tokens, seg_src_lengths, left_context_size)
             
+            if self.record_forward_time:
+                start = time.time()
             (seg_encoder_states, seg_enc_lengths, states, left_memory, prev_output) = self.module(
             seg_src_tokens,
             seg_src_lengths,
@@ -699,6 +721,10 @@ class SequenceEncoder(FairseqEncoder):
             left_memory=left_memory,
             prev_output=prev_output,
             )
+            if self.record_forward_time:
+                end = time.time()
+                print("time: ", end - start)
+                print("tokens: ", seg_src_lengths)
 
             seg_encoder_states_lengths.append((seg_encoder_states, seg_enc_lengths))
             if not self.encoder_left_context:
@@ -822,6 +848,24 @@ def augmented_memory(klass):
             )
             parser.add_argument(
                 "--shift-right-context",
+                action="store_true",
+                default=False,
+                help="if True, squash memory banks",
+            )
+            parser.add_argument(
+                "--shift-left-context",
+                action="store_true",
+                default=False,
+                help="if True, squash memory banks",
+            )
+            parser.add_argument(
+                "--disable-suppression",
+                action="store_true",
+                default=False,
+                help="if True, squash memory banks",
+            )
+            parser.add_argument(
+                "--record-forward-time",
                 action="store_true",
                 default=False,
                 help="if True, squash memory banks",

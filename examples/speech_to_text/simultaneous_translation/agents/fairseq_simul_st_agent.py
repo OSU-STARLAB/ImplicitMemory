@@ -218,10 +218,10 @@ class FairseqSimulSTAgent(SpeechAgent):
             "--variable-left-context-method", choices=["input", "output"], default=None, help="Summarization method"
         )
         parser.add_argument(
-            "--shift-right-context", action="store_true", default=None, help="if True, squash memory banks",
+            "--shift-right-context", action="store_true", default=False, help="if True, squash memory banks",
         )
         parser.add_argument(
-            "--encoder-left-context", action="store_true", default=None, help="if True, squash memory banks",
+            "--encoder-left-context", action="store_true", default=False, help="if True, squash memory banks",
         )
         parser.add_argument(
             "--segment-size", type=int, default=None, help="Length of the segment."
@@ -235,6 +235,22 @@ class FairseqSimulSTAgent(SpeechAgent):
         parser.add_argument(
             "--max-memory-size", type=int, default=None, help="Right context for the segment.",
         )
+        parser.add_argument(
+            "--record-forward-time", action="store_true", default=False, help="if True, squash memory banks",
+        )
+        parser.add_argument(
+            "--left-context-method",
+            default=None,
+            choices=["input", "pre_output", "output"],
+            help="Left context strategy for normal left context"
+        )
+        parser.add_argument(
+            "--shift-left-context",
+            action="store_true",
+            default=None,
+            help="if True, squash memory banks",
+        )
+        
 
         # fmt: on
         return parser
@@ -258,6 +274,12 @@ class FairseqSimulSTAgent(SpeechAgent):
             state["cfg"]["model"].shift_right_context = args.shift_right_context
         if args.max_memory_size is not None:
             state["cfg"]["model"].max_memory_size = args.max_memory_size
+        if args.record_forward_time is not None:
+            state["cfg"]["model"].record_forward_time = args.record_forward_time
+        if args.left_context_method is not None:
+            state["cfg"]["model"].left_context_method = args.left_context_method
+        if args.shift_left_context is not None:
+            state["cfg"]["model"].shift_left_context = args.shift_left_context
         return state
 
     def load_model_vocab(self, args):

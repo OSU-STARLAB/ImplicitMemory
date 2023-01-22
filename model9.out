@@ -1,0 +1,915 @@
+2023-01-20 02:50:58 | INFO | fairseq_cli.train | {'_name': None, 'common': {'_name': None, 'no_progress_bar': False, 'log_interval': 50, 'log_format': None, 'log_file': None, 'tensorboard_logdir': None, 'wandb_project': None, 'azureml_logging': False, 'seed': 4, 'cpu': False, 'tpu': False, 'bf16': False, 'memory_efficient_bf16': False, 'fp16': False, 'memory_efficient_fp16': False, 'fp16_no_flatten_grads': False, 'fp16_init_scale': 128, 'fp16_scale_window': None, 'fp16_scale_tolerance': 0.0, 'on_cpu_convert_precision': False, 'min_loss_scale': 0.0001, 'threshold_loss_scale': None, 'amp': False, 'amp_batch_retries': 2, 'amp_init_scale': 128, 'amp_scale_window': None, 'user_dir': None, 'empty_cache_freq': 0, 'all_gather_list_size': 16384, 'model_parallel_size': 1, 'quantization_config_path': None, 'profile': False, 'reset_logging': False, 'suppress_crashes': False, 'use_plasma_view': False, 'plasma_path': '/tmp/plasma'}, 'common_eval': {'_name': None, 'path': None, 'post_process': None, 'quiet': False, 'model_overrides': '{}', 'results_path': None}, 'distributed_training': {'_name': None, 'distributed_world_size': 1, 'distributed_num_procs': 1, 'distributed_rank': 0, 'distributed_backend': 'nccl', 'distributed_init_method': None, 'distributed_port': -1, 'device_id': 0, 'distributed_no_spawn': False, 'ddp_backend': 'legacy_ddp', 'ddp_comm_hook': 'none', 'bucket_cap_mb': 25, 'fix_batches_to_gpus': False, 'find_unused_parameters': False, 'gradient_as_bucket_view': False, 'fast_stat_sync': False, 'heartbeat_timeout': -1, 'broadcast_buffers': False, 'slowmo_momentum': None, 'slowmo_base_algorithm': 'localsgd', 'localsgd_frequency': 3, 'nprocs_per_node': 1, 'pipeline_model_parallel': False, 'pipeline_balance': None, 'pipeline_devices': None, 'pipeline_chunks': 0, 'pipeline_encoder_balance': None, 'pipeline_encoder_devices': None, 'pipeline_decoder_balance': None, 'pipeline_decoder_devices': None, 'pipeline_checkpoint': 'never', 'zero_sharding': 'none', 'fp16': False, 'memory_efficient_fp16': False, 'tpu': False, 'no_reshard_after_forward': False, 'fp32_reduce_scatter': False, 'cpu_offload': False, 'use_sharded_state': False, 'not_fsdp_flatten_parameters': False}, 'dataset': {'_name': None, 'num_workers': 1, 'skip_invalid_size_inputs_valid_test': False, 'max_tokens': 20000, 'batch_size': None, 'required_batch_size_multiple': 8, 'required_seq_len_multiple': 1, 'dataset_impl': None, 'data_buffer_size': 10, 'train_subset': 'train_st', 'valid_subset': 'dev_st', 'combine_valid_subsets': None, 'ignore_unused_valid_subsets': False, 'validate_interval': 1, 'validate_interval_updates': 0, 'validate_after_updates': 0, 'fixed_validation_seed': None, 'disable_validation': False, 'max_tokens_valid': 20000, 'batch_size_valid': None, 'max_valid_steps': None, 'curriculum': 0, 'gen_subset': 'test', 'num_shards': 1, 'shard_id': 0, 'grouped_shuffling': False, 'update_epoch_batch_itr': False, 'update_ordered_indices_seed': False}, 'optimization': {'_name': None, 'max_epoch': 0, 'max_update': 100000, 'stop_time_hours': 0.0, 'clip_norm': 10.0, 'sentence_avg': False, 'update_freq': [16], 'lr': [0.00035], 'stop_min_lr': -1.0, 'use_bmuf': False, 'skip_remainder_batch': False}, 'checkpoint': {'_name': None, 'save_dir': '/nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9', 'restore_file': 'checkpoint_last.pt', 'continue_once': None, 'finetune_from_model': None, 'reset_dataloader': False, 'reset_lr_scheduler': False, 'reset_meters': False, 'reset_optimizer': False, 'optimizer_overrides': '{}', 'save_interval': 1, 'save_interval_updates': 0, 'keep_interval_updates': -1, 'keep_interval_updates_pattern': -1, 'keep_last_epochs': 10, 'keep_best_checkpoints': -1, 'no_save': False, 'no_epoch_checkpoints': False, 'no_last_checkpoints': False, 'no_save_optimizer_state': False, 'best_checkpoint_metric': 'loss', 'maximize_best_checkpoint_metric': False, 'patience': 10, 'checkpoint_suffix': '', 'checkpoint_shard_count': 1, 'load_checkpoint_on_all_dp_ranks': False, 'write_checkpoints_asynchronously': False, 'model_parallel_size': 1}, 'bmuf': {'_name': None, 'block_lr': 1.0, 'block_momentum': 0.875, 'global_sync_iter': 50, 'warmup_iterations': 500, 'use_nbm': False, 'average_sync': False, 'distributed_world_size': 1}, 'generation': {'_name': None, 'beam': 5, 'nbest': 1, 'max_len_a': 0.0, 'max_len_b': 200, 'min_len': 1, 'match_source_len': False, 'unnormalized': False, 'no_early_stop': False, 'no_beamable_mm': False, 'lenpen': 1.0, 'unkpen': 0.0, 'replace_unk': None, 'sacrebleu': False, 'score_reference': False, 'prefix_size': 0, 'no_repeat_ngram_size': 0, 'sampling': False, 'sampling_topk': -1, 'sampling_topp': -1.0, 'constraints': None, 'temperature': 1.0, 'diverse_beam_groups': -1, 'diverse_beam_strength': 0.5, 'diversity_rate': -1.0, 'print_alignment': None, 'print_step': False, 'lm_path': None, 'lm_weight': 0.0, 'iter_decode_eos_penalty': 0.0, 'iter_decode_max_iter': 10, 'iter_decode_force_max_iter': False, 'iter_decode_with_beam': 1, 'iter_decode_with_external_reranker': False, 'retain_iter_history': False, 'retain_dropout': False, 'retain_dropout_modules': None, 'decoding_format': None, 'no_seed_provided': False}, 'eval_lm': {'_name': None, 'output_word_probs': False, 'output_word_stats': False, 'context_window': 0, 'softmax_batch': 9223372036854775807}, 'interactive': {'_name': None, 'buffer_size': 0, 'input': '-'}, 'model': Namespace(no_progress_bar=False, log_interval=50, log_format=None, log_file=None, tensorboard_logdir=None, wandb_project=None, azureml_logging=False, seed=4, cpu=False, tpu=False, bf16=False, memory_efficient_bf16=False, fp16=False, memory_efficient_fp16=False, fp16_no_flatten_grads=False, fp16_init_scale=128, fp16_scale_window=None, fp16_scale_tolerance=0.0, on_cpu_convert_precision=False, min_loss_scale=0.0001, threshold_loss_scale=None, amp=False, amp_batch_retries=2, amp_init_scale=128, amp_scale_window=None, user_dir=None, empty_cache_freq=0, all_gather_list_size=16384, model_parallel_size=1, quantization_config_path=None, profile=False, reset_logging=False, suppress_crashes=False, use_plasma_view=False, plasma_path='/tmp/plasma', criterion='label_smoothed_cross_entropy', tokenizer=None, bpe=None, optimizer='adam', lr_scheduler='inverse_sqrt', simul_type='waitk_fixed_pre_decision', scoring='bleu', task='speech_to_text', num_workers=1, skip_invalid_size_inputs_valid_test=False, max_tokens=20000, batch_size=None, required_batch_size_multiple=8, required_seq_len_multiple=1, dataset_impl=None, data_buffer_size=10, train_subset='train_st', valid_subset='dev_st', combine_valid_subsets=None, ignore_unused_valid_subsets=False, validate_interval=1, validate_interval_updates=0, validate_after_updates=0, fixed_validation_seed=None, disable_validation=False, max_tokens_valid=20000, batch_size_valid=None, max_valid_steps=None, curriculum=0, gen_subset='test', num_shards=1, shard_id=0, grouped_shuffling=False, update_epoch_batch_itr=False, update_ordered_indices_seed=False, distributed_world_size=1, distributed_num_procs=1, distributed_rank=0, distributed_backend='nccl', distributed_init_method=None, distributed_port=-1, device_id=0, distributed_no_spawn=False, ddp_backend='legacy_ddp', ddp_comm_hook='none', bucket_cap_mb=25, fix_batches_to_gpus=False, find_unused_parameters=False, gradient_as_bucket_view=False, fast_stat_sync=False, heartbeat_timeout=-1, broadcast_buffers=False, slowmo_momentum=None, slowmo_base_algorithm='localsgd', localsgd_frequency=3, nprocs_per_node=1, pipeline_model_parallel=False, pipeline_balance=None, pipeline_devices=None, pipeline_chunks=0, pipeline_encoder_balance=None, pipeline_encoder_devices=None, pipeline_decoder_balance=None, pipeline_decoder_devices=None, pipeline_checkpoint='never', zero_sharding='none', no_reshard_after_forward=False, fp32_reduce_scatter=False, cpu_offload=False, use_sharded_state=False, not_fsdp_flatten_parameters=False, arch='convtransformer_augmented_memory', max_epoch=0, max_update=100000, stop_time_hours=0, clip_norm=10.0, sentence_avg=False, update_freq=[16], lr=[0.00035], stop_min_lr=-1.0, use_bmuf=False, skip_remainder_batch=False, save_dir='/nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9', restore_file='checkpoint_last.pt', continue_once=None, finetune_from_model=None, reset_dataloader=False, reset_lr_scheduler=False, reset_meters=False, reset_optimizer=False, optimizer_overrides='{}', save_interval=1, save_interval_updates=0, keep_interval_updates=-1, keep_interval_updates_pattern=-1, keep_last_epochs=10, keep_best_checkpoints=-1, no_save=False, no_epoch_checkpoints=False, no_last_checkpoints=False, no_save_optimizer_state=False, best_checkpoint_metric='loss', maximize_best_checkpoint_metric=False, patience=10, checkpoint_suffix='', checkpoint_shard_count=1, load_checkpoint_on_all_dp_ranks=False, write_checkpoints_asynchronously=False, store_ema=False, ema_decay=0.9999, ema_start_update=0, ema_seed_model=None, ema_update_freq=1, ema_fp32=False, train_monotonic_only=False, left_context=32, right_context=32, max_memory_size=3, increase_context=False, share_mem_bank_layers=None, tanh_on_mem=False, variable_left_context_method=None, encoder_left_context=False, left_compression_factor=1, max_relative_position=16, shift_right_context=False, shift_left_context=False, disable_suppression=False, record_forward_time=False, data='/nfs/hpc/share/raffelm/research/data_prep/dataset3/en-fr', config_yaml='config_st.yaml', max_source_positions=6000, max_target_positions=1024, label_smoothing=0.0, report_accuracy=True, ignore_prefix_size=0, adam_betas='[0.9,0.98]', adam_eps=1e-08, weight_decay=0.0001, use_old_adam=False, fp16_adam_stats=False, warmup_updates=7500, warmup_init_lr=0.0001, mass_preservation=True, noise_var=1.0, noise_mean=0.0, noise_type='flat', energy_bias=False, energy_bias_init=-2.0, attention_eps=1e-06, waitk_lagging=1, fixed_pre_decision_ratio=8, fixed_pre_decision_type='average', fixed_pre_decision_pad_threshold=0.3, pad=1, eos=2, unk=3, load_pretrained_encoder_from='/nfs/hpc/share/raffelm/research/paper_models/ACL/asr_models/model5/checkpoint_average.pt', segment_size=64, encoder_normalize_before=True, decoder_normalize_before=True, attention_dropout=0.2, activation_dropout=0.2, no_seed_provided=False, encoder_embed_dim=256, encoder_layers=12, encoder_attention_heads=4, decoder_attention_heads=4, _name='convtransformer_augmented_memory'), 'task': Namespace(no_progress_bar=False, log_interval=50, log_format=None, log_file=None, tensorboard_logdir=None, wandb_project=None, azureml_logging=False, seed=4, cpu=False, tpu=False, bf16=False, memory_efficient_bf16=False, fp16=False, memory_efficient_fp16=False, fp16_no_flatten_grads=False, fp16_init_scale=128, fp16_scale_window=None, fp16_scale_tolerance=0.0, on_cpu_convert_precision=False, min_loss_scale=0.0001, threshold_loss_scale=None, amp=False, amp_batch_retries=2, amp_init_scale=128, amp_scale_window=None, user_dir=None, empty_cache_freq=0, all_gather_list_size=16384, model_parallel_size=1, quantization_config_path=None, profile=False, reset_logging=False, suppress_crashes=False, use_plasma_view=False, plasma_path='/tmp/plasma', criterion='label_smoothed_cross_entropy', tokenizer=None, bpe=None, optimizer='adam', lr_scheduler='inverse_sqrt', simul_type='waitk_fixed_pre_decision', scoring='bleu', task='speech_to_text', num_workers=1, skip_invalid_size_inputs_valid_test=False, max_tokens=20000, batch_size=None, required_batch_size_multiple=8, required_seq_len_multiple=1, dataset_impl=None, data_buffer_size=10, train_subset='train_st', valid_subset='dev_st', combine_valid_subsets=None, ignore_unused_valid_subsets=False, validate_interval=1, validate_interval_updates=0, validate_after_updates=0, fixed_validation_seed=None, disable_validation=False, max_tokens_valid=20000, batch_size_valid=None, max_valid_steps=None, curriculum=0, gen_subset='test', num_shards=1, shard_id=0, grouped_shuffling=False, update_epoch_batch_itr=False, update_ordered_indices_seed=False, distributed_world_size=1, distributed_num_procs=1, distributed_rank=0, distributed_backend='nccl', distributed_init_method=None, distributed_port=-1, device_id=0, distributed_no_spawn=False, ddp_backend='legacy_ddp', ddp_comm_hook='none', bucket_cap_mb=25, fix_batches_to_gpus=False, find_unused_parameters=False, gradient_as_bucket_view=False, fast_stat_sync=False, heartbeat_timeout=-1, broadcast_buffers=False, slowmo_momentum=None, slowmo_base_algorithm='localsgd', localsgd_frequency=3, nprocs_per_node=1, pipeline_model_parallel=False, pipeline_balance=None, pipeline_devices=None, pipeline_chunks=0, pipeline_encoder_balance=None, pipeline_encoder_devices=None, pipeline_decoder_balance=None, pipeline_decoder_devices=None, pipeline_checkpoint='never', zero_sharding='none', no_reshard_after_forward=False, fp32_reduce_scatter=False, cpu_offload=False, use_sharded_state=False, not_fsdp_flatten_parameters=False, arch='convtransformer_augmented_memory', max_epoch=0, max_update=100000, stop_time_hours=0, clip_norm=10.0, sentence_avg=False, update_freq=[16], lr=[0.00035], stop_min_lr=-1.0, use_bmuf=False, skip_remainder_batch=False, save_dir='/nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9', restore_file='checkpoint_last.pt', continue_once=None, finetune_from_model=None, reset_dataloader=False, reset_lr_scheduler=False, reset_meters=False, reset_optimizer=False, optimizer_overrides='{}', save_interval=1, save_interval_updates=0, keep_interval_updates=-1, keep_interval_updates_pattern=-1, keep_last_epochs=10, keep_best_checkpoints=-1, no_save=False, no_epoch_checkpoints=False, no_last_checkpoints=False, no_save_optimizer_state=False, best_checkpoint_metric='loss', maximize_best_checkpoint_metric=False, patience=10, checkpoint_suffix='', checkpoint_shard_count=1, load_checkpoint_on_all_dp_ranks=False, write_checkpoints_asynchronously=False, store_ema=False, ema_decay=0.9999, ema_start_update=0, ema_seed_model=None, ema_update_freq=1, ema_fp32=False, train_monotonic_only=False, left_context=32, right_context=32, max_memory_size=3, increase_context=False, share_mem_bank_layers=None, tanh_on_mem=False, variable_left_context_method=None, encoder_left_context=False, left_compression_factor=1, max_relative_position=16, shift_right_context=False, shift_left_context=False, disable_suppression=False, record_forward_time=False, data='/nfs/hpc/share/raffelm/research/data_prep/dataset3/en-fr', config_yaml='config_st.yaml', max_source_positions=6000, max_target_positions=1024, label_smoothing=0.0, report_accuracy=True, ignore_prefix_size=0, adam_betas='[0.9,0.98]', adam_eps=1e-08, weight_decay=0.0001, use_old_adam=False, fp16_adam_stats=False, warmup_updates=7500, warmup_init_lr=0.0001, mass_preservation=True, noise_var=1.0, noise_mean=0.0, noise_type='flat', energy_bias=False, energy_bias_init=-2.0, attention_eps=1e-06, waitk_lagging=1, fixed_pre_decision_ratio=8, fixed_pre_decision_type='average', fixed_pre_decision_pad_threshold=0.3, pad=1, eos=2, unk=3, load_pretrained_encoder_from='/nfs/hpc/share/raffelm/research/paper_models/ACL/asr_models/model5/checkpoint_average.pt', segment_size=64, encoder_normalize_before=True, decoder_normalize_before=True, attention_dropout=0.2, activation_dropout=0.2, no_seed_provided=False, encoder_embed_dim=256, encoder_layers=12, encoder_attention_heads=4, decoder_attention_heads=4, _name='speech_to_text'), 'criterion': {'_name': 'label_smoothed_cross_entropy', 'label_smoothing': 0.0, 'report_accuracy': True, 'ignore_prefix_size': 0, 'sentence_avg': False}, 'optimizer': {'_name': 'adam', 'adam_betas': '[0.9,0.98]', 'adam_eps': 1e-08, 'weight_decay': 0.0001, 'use_old_adam': False, 'fp16_adam_stats': False, 'tpu': False, 'lr': [0.00035]}, 'lr_scheduler': {'_name': 'inverse_sqrt', 'warmup_updates': 7500, 'warmup_init_lr': 0.0001, 'lr': [0.00035]}, 'scoring': {'_name': 'bleu', 'pad': 1, 'eos': 2, 'unk': 3}, 'bpe': None, 'tokenizer': None, 'ema': {'_name': None, 'store_ema': False, 'ema_decay': 0.9999, 'ema_start_update': 0, 'ema_seed_model': None, 'ema_update_freq': 1, 'ema_fp32': False}, 'simul_type': 'waitk_fixed_pre_decision'}
+2023-01-20 02:50:58 | INFO | fairseq.tasks.speech_to_text | dictionary size (spm_unigram10000_st.txt): 10,000
+Encoder: Sharing layers: []
+Encoder: Sharing layers: []
+Decoder: Sharing layers: []
+TransformerMonotonicDecoder sharing layers: []
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | AugmentedMemoryConvTransformerModel(
+  (encoder): SequenceEncoder(
+    (module): AugmentedMemoryConvTransformerEncoder(
+      (conv): Sequential(
+        (0): Conv2d(1, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+        (1): ReLU()
+        (2): Conv2d(256, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+        (3): ReLU()
+      )
+      (out): Linear(in_features=5120, out_features=256, bias=True)
+      (embed_positions): SinusoidalPositionalEmbedding()
+      (transformer_layers): ModuleList(
+        (0): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (1): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (2): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (3): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (4): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (5): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (6): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (7): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (8): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (9): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (10): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (11): AugmentedMemoryTransformerEncoderLayer(
+          (self_attn): AugmentedMemoryMultiheadAttention(
+            (dropout_module): FairseqDropout()
+            (k_proj): Linear(in_features=256, out_features=256, bias=True)
+            (v_proj): Linear(in_features=256, out_features=256, bias=True)
+            (q_proj): Linear(in_features=256, out_features=256, bias=True)
+            (out_proj): Linear(in_features=256, out_features=256, bias=True)
+            (rpe_k): RelativePositionEmbedding()
+            (rpe_v): RelativePositionEmbedding()
+          )
+          (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (dropout_module): FairseqDropout()
+          (activation_dropout_module): FairseqDropout()
+          (fc1): Linear(in_features=256, out_features=2048, bias=True)
+          (fc2): Linear(in_features=2048, out_features=256, bias=True)
+          (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+      (layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      (summarize): AvgPool1d(kernel_size=(1,), stride=(1,), padding=(0,))
+    )
+    (summarize): AvgPool1d(kernel_size=(1,), stride=(1,), padding=(0,))
+  )
+  (decoder): TransformerMonotonicDecoder(
+    (dropout_module): FairseqDropout()
+    (embed_tokens): Embedding(10000, 256, padding_idx=1)
+    (embed_positions): SinusoidalPositionalEmbedding()
+    (layers): ModuleList(
+      (0): TransformerMonotonicDecoderLayer(
+        (dropout_module): FairseqDropout()
+        (self_attn): MultiheadAttention(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+        )
+        (activation_dropout_module): FairseqDropout()
+        (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (encoder_attn): WaitKAttentionFixedStride(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+          (k_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (pooling_layer): AvgPool1d(kernel_size=(8,), stride=(8,), padding=(0,))
+        )
+        (encoder_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (fc1): Linear(in_features=256, out_features=2048, bias=True)
+        (fc2): Linear(in_features=2048, out_features=256, bias=True)
+        (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      )
+      (1): TransformerMonotonicDecoderLayer(
+        (dropout_module): FairseqDropout()
+        (self_attn): MultiheadAttention(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+        )
+        (activation_dropout_module): FairseqDropout()
+        (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (encoder_attn): WaitKAttentionFixedStride(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+          (k_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (pooling_layer): AvgPool1d(kernel_size=(8,), stride=(8,), padding=(0,))
+        )
+        (encoder_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (fc1): Linear(in_features=256, out_features=2048, bias=True)
+        (fc2): Linear(in_features=2048, out_features=256, bias=True)
+        (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      )
+      (2): TransformerMonotonicDecoderLayer(
+        (dropout_module): FairseqDropout()
+        (self_attn): MultiheadAttention(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+        )
+        (activation_dropout_module): FairseqDropout()
+        (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (encoder_attn): WaitKAttentionFixedStride(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+          (k_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (pooling_layer): AvgPool1d(kernel_size=(8,), stride=(8,), padding=(0,))
+        )
+        (encoder_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (fc1): Linear(in_features=256, out_features=2048, bias=True)
+        (fc2): Linear(in_features=2048, out_features=256, bias=True)
+        (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      )
+      (3): TransformerMonotonicDecoderLayer(
+        (dropout_module): FairseqDropout()
+        (self_attn): MultiheadAttention(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+        )
+        (activation_dropout_module): FairseqDropout()
+        (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (encoder_attn): WaitKAttentionFixedStride(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+          (k_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (pooling_layer): AvgPool1d(kernel_size=(8,), stride=(8,), padding=(0,))
+        )
+        (encoder_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (fc1): Linear(in_features=256, out_features=2048, bias=True)
+        (fc2): Linear(in_features=2048, out_features=256, bias=True)
+        (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      )
+      (4): TransformerMonotonicDecoderLayer(
+        (dropout_module): FairseqDropout()
+        (self_attn): MultiheadAttention(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+        )
+        (activation_dropout_module): FairseqDropout()
+        (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (encoder_attn): WaitKAttentionFixedStride(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+          (k_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (pooling_layer): AvgPool1d(kernel_size=(8,), stride=(8,), padding=(0,))
+        )
+        (encoder_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (fc1): Linear(in_features=256, out_features=2048, bias=True)
+        (fc2): Linear(in_features=2048, out_features=256, bias=True)
+        (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      )
+      (5): TransformerMonotonicDecoderLayer(
+        (dropout_module): FairseqDropout()
+        (self_attn): MultiheadAttention(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+        )
+        (activation_dropout_module): FairseqDropout()
+        (self_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (encoder_attn): WaitKAttentionFixedStride(
+          (dropout_module): FairseqDropout()
+          (k_proj): Linear(in_features=256, out_features=256, bias=True)
+          (v_proj): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj): Linear(in_features=256, out_features=256, bias=True)
+          (out_proj): Linear(in_features=256, out_features=256, bias=True)
+          (k_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (q_proj_soft): Linear(in_features=256, out_features=256, bias=True)
+          (pooling_layer): AvgPool1d(kernel_size=(8,), stride=(8,), padding=(0,))
+        )
+        (encoder_attn_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (fc1): Linear(in_features=256, out_features=2048, bias=True)
+        (fc2): Linear(in_features=2048, out_features=256, bias=True)
+        (final_layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+    (output_projection): Linear(in_features=256, out_features=10000, bias=False)
+  )
+)
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | task: SpeechToTextTask
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | model: AugmentedMemoryConvTransformerModel
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | criterion: LabelSmoothedCrossEntropyCriterion
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | num. shared model params: 33,118,208 (num. trained: 33,118,208)
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | num. expert model params: 0 (num. trained: 0)
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.conv.0.weight, num params: 2304
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.conv.0.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.conv.2.weight, num params: 589824
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.conv.2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.out.weight, num params: 1310720
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.out.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.0.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.1.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.2.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.3.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.4.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.5.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.6.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.7.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.8.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.9.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.10.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.rpe_k.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn.rpe_v.embeddings, num params: 2112
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.transformer_layers.11.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: encoder.module.layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.embed_tokens.weight, num params: 2560000
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.k_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.k_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.q_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn.q_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.encoder_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.0.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.k_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.k_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.q_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn.q_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.encoder_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.1.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.k_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.k_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.q_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn.q_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.encoder_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.2.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.k_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.k_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.q_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn.q_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.encoder_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.3.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.k_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.k_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.q_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn.q_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.encoder_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.4.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.self_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.k_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.k_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.v_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.v_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.q_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.q_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.out_proj.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.out_proj.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.k_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.k_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.q_proj_soft.weight, num params: 65536
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn.q_proj_soft.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.encoder_attn_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.fc1.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.fc1.bias, num params: 2048
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.fc2.weight, num params: 524288
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.fc2.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.final_layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layers.5.final_layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layer_norm.weight, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.layer_norm.bias, num params: 256
+2023-01-20 02:50:59 | INFO | fairseq_cli.train | layer: decoder.output_projection.weight, num params: 2560000
+2023-01-20 02:50:59 | INFO | fairseq.tasks.speech_to_text | pre-tokenizer: {'tokenizer': None}
+2023-01-20 02:50:59 | INFO | fairseq.tasks.speech_to_text | tokenizer: {'bpe': 'sentencepiece', 'sentencepiece_model': '/nfs/hpc/share/raffelm/research/data_prep/dataset3/en-fr/spm_unigram10000_st.model'}
+2023-01-20 02:50:59 | INFO | fairseq.data.audio.speech_to_text_dataset | 'dev_st' has 0.00% OOV
+2023-01-20 02:50:59 | INFO | fairseq.data.audio.speech_to_text_dataset | SpeechToTextDataset(split="dev_st", n_samples=1_408, prepend_tgt_lang_tag=False, shuffle=False, transforms=CompositeAudioFeatureTransform(
+    GlobalCMVN(stats_npz_path="/nfs/hpc/share/raffelm/research/data_prep/dataset3/en-fr/gcmvn.npz")
+), n_frames_per_step=1
+2023-01-20 02:51:00 | INFO | fairseq.utils | ***********************CUDA enviroments for all 1 workers***********************
+2023-01-20 02:51:00 | INFO | fairseq.utils | rank   0: capabilities =  8.6  ; total memory = 44.428 GB ; name = NVIDIA A40                              
+2023-01-20 02:51:00 | INFO | fairseq.utils | ***********************CUDA enviroments for all 1 workers***********************
+2023-01-20 02:51:00 | INFO | fairseq_cli.train | training on 1 devices (GPUs/TPUs)
+2023-01-20 02:51:00 | INFO | fairseq_cli.train | max tokens per device = 20000 and max sentences per device = None
+2023-01-20 02:51:00 | INFO | fairseq.trainer | Preparing to load checkpoint /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint_last.pt
+2023-01-20 02:51:00 | INFO | fairseq.trainer | No existing checkpoint found /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint_last.pt
+2023-01-20 02:51:00 | INFO | fairseq.trainer | loading train data for epoch 1
+2023-01-20 02:51:00 | INFO | fairseq.tasks.speech_to_text | pre-tokenizer: {'tokenizer': None}
+2023-01-20 02:51:00 | INFO | fairseq.tasks.speech_to_text | tokenizer: {'bpe': 'sentencepiece', 'sentencepiece_model': '/nfs/hpc/share/raffelm/research/data_prep/dataset3/en-fr/spm_unigram10000_st.model'}
+2023-01-20 02:51:15 | INFO | fairseq.data.audio.speech_to_text_dataset | 'train_st' has 0.00% OOV
+2023-01-20 02:51:15 | INFO | fairseq.data.audio.speech_to_text_dataset | SpeechToTextDataset(split="train_st", n_samples=269_255, prepend_tgt_lang_tag=False, shuffle=False, transforms=CompositeAudioFeatureTransform(
+    GlobalCMVN(stats_npz_path="/nfs/hpc/share/raffelm/research/data_prep/dataset3/en-fr/gcmvn.npz")
+    SpecAugmentTransform(time_warp_w=0, freq_mask_n=1, freq_mask_f=27, time_mask_n=1, time_mask_t=100, time_mask_p=1.0)
+), n_frames_per_step=1
+2023-01-20 02:51:16 | INFO | fairseq.trainer | NOTE: your device may support faster training with --fp16 or --amp
+2023-01-20 02:51:16 | INFO | fairseq.data.iterators | grouped total_num_itrs = 659
+2023-01-20 02:51:16 | INFO | fairseq.trainer | begin training epoch 1
+2023-01-20 02:51:16 | INFO | fairseq_cli.train | Start iterating over samples
+2023-01-20 03:02:42 | INFO | train_inner | epoch 001:     50 / 659 loss=11.366, nll_loss=11.366, total=11842.5, n_correct=952.3, ppl=2638.54, accuracy=8.041, wps=891.8, ups=0.08, wpb=11842.5, bsz=421.3, num_updates=50, lr=0.000101667, gnorm=1.544, clip=0, train_wall=575, gb_free=38.4, wall=702
+2023-01-20 03:12:25 | INFO | train_inner | epoch 001:    100 / 659 loss=9.48, nll_loss=9.48, total=11521.2, n_correct=1629.18, ppl=714.05, accuracy=14.141, wps=989.1, ups=0.09, wpb=11521.2, bsz=411.4, num_updates=100, lr=0.000103333, gnorm=0.697, clip=0, train_wall=537, gb_free=38.1, wall=1285
+2023-01-20 03:21:28 | INFO | train_inner | epoch 001:    150 / 659 loss=8.807, nll_loss=8.807, total=11516.8, n_correct=1787.98, ppl=447.84, accuracy=15.525, wps=1061, ups=0.09, wpb=11516.8, bsz=389.3, num_updates=150, lr=0.000105, gnorm=0.457, clip=0, train_wall=526, gb_free=38.6, wall=1827
+2023-01-20 03:30:26 | INFO | train_inner | epoch 001:    200 / 659 loss=8.387, nll_loss=8.387, total=11560.9, n_correct=2024.38, ppl=334.76, accuracy=17.511, wps=1073.4, ups=0.09, wpb=11560.9, bsz=395, num_updates=200, lr=0.000106667, gnorm=0.52, clip=0, train_wall=529, gb_free=38.3, wall=2366
+2023-01-20 03:39:13 | INFO | train_inner | epoch 001:    250 / 659 loss=8.042, nll_loss=8.042, total=11601.3, n_correct=2246.86, ppl=263.53, accuracy=19.367, wps=1101.7, ups=0.09, wpb=11601.3, bsz=410.1, num_updates=250, lr=0.000108333, gnorm=0.549, clip=0, train_wall=519, gb_free=35.4, wall=2893
+2023-01-20 03:47:43 | INFO | train_inner | epoch 001:    300 / 659 loss=7.773, nll_loss=7.773, total=11830.6, n_correct=2440.18, ppl=218.68, accuracy=20.626, wps=1158.3, ups=0.1, wpb=11830.6, bsz=429.3, num_updates=300, lr=0.00011, gnorm=0.534, clip=0, train_wall=503, gb_free=38.3, wall=3403
+2023-01-20 03:56:25 | INFO | train_inner | epoch 001:    350 / 659 loss=7.534, nll_loss=7.534, total=11734.2, n_correct=2554.24, ppl=185.37, accuracy=21.767, wps=1124.9, ups=0.1, wpb=11734.2, bsz=430.2, num_updates=350, lr=0.000111667, gnorm=0.557, clip=0, train_wall=515, gb_free=38.7, wall=3925
+2023-01-20 04:05:08 | INFO | train_inner | epoch 001:    400 / 659 loss=7.369, nll_loss=7.369, total=11705, n_correct=2604.28, ppl=165.26, accuracy=22.249, wps=1119.7, ups=0.1, wpb=11705, bsz=414.8, num_updates=400, lr=0.000113333, gnorm=0.524, clip=0, train_wall=515, gb_free=38.3, wall=4447
+2023-01-20 04:13:52 | INFO | train_inner | epoch 001:    450 / 659 loss=7.223, nll_loss=7.223, total=11609.3, n_correct=2645.88, ppl=149.38, accuracy=22.791, wps=1106.6, ups=0.1, wpb=11609.3, bsz=402, num_updates=450, lr=0.000115, gnorm=0.532, clip=0, train_wall=518, gb_free=38.5, wall=4972
+2023-01-20 04:22:47 | INFO | train_inner | epoch 001:    500 / 659 loss=7.087, nll_loss=7.087, total=11585, n_correct=2702.34, ppl=135.94, accuracy=23.326, wps=1082.1, ups=0.09, wpb=11585, bsz=402, num_updates=500, lr=0.000116667, gnorm=0.523, clip=0, train_wall=529, gb_free=38.2, wall=5507
+2023-01-20 04:31:42 | INFO | train_inner | epoch 001:    550 / 659 loss=6.946, nll_loss=6.946, total=11673.6, n_correct=2805.32, ppl=123.33, accuracy=24.031, wps=1091.5, ups=0.09, wpb=11673.6, bsz=409.4, num_updates=550, lr=0.000118333, gnorm=0.546, clip=0, train_wall=529, gb_free=38.4, wall=6042
+2023-01-20 04:40:22 | INFO | train_inner | epoch 001:    600 / 659 loss=6.857, nll_loss=6.857, total=11526.2, n_correct=2811.56, ppl=115.89, accuracy=24.393, wps=1108, ups=0.1, wpb=11526.2, bsz=395.7, num_updates=600, lr=0.00012, gnorm=0.563, clip=0, train_wall=514, gb_free=38.5, wall=6562
+2023-01-20 04:49:02 | INFO | train_inner | epoch 001:    650 / 659 loss=6.76, nll_loss=6.76, total=11602.6, n_correct=2889.3, ppl=108.4, accuracy=24.902, wps=1115.5, ups=0.1, wpb=11602.6, bsz=405.3, num_updates=650, lr=0.000121667, gnorm=0.564, clip=0, train_wall=515, gb_free=38.3, wall=7082
+2023-01-20 04:50:24 | INFO | fairseq_cli.train | begin validation on "dev_st" subset
+2023-01-20 04:50:42 | INFO | dev_st | epoch 001 | valid on 'dev_st' subset | loss 6.404 | nll_loss 6.404 | total 690.117 | n_correct 189.4 | ppl 84.66 | accuracy 27.445 | wps 2519.9 | wpb 690.1 | bsz 23.5 | num_updates 659
+2023-01-20 04:50:42 | INFO | fairseq.checkpoint_utils | Preparing to save checkpoint for epoch 1 @ 659 updates
+2023-01-20 04:50:42 | INFO | fairseq.trainer | Saving checkpoint to /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint1.pt
+2023-01-20 04:50:43 | INFO | fairseq.trainer | Finished saving checkpoint to /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint1.pt
+2023-01-20 04:50:45 | INFO | fairseq.checkpoint_utils | Saved checkpoint /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint1.pt (epoch 1 @ 659 updates, score 6.404) (writing took 2.9170495658181608 seconds)
+2023-01-20 04:50:45 | INFO | fairseq_cli.train | end of epoch 1 (average epoch stats below)
+2023-01-20 04:50:45 | INFO | train | epoch 001 | loss 7.958 | nll_loss 7.958 | total 11630.4 | n_correct 2321.31 | ppl 248.67 | accuracy 19.959 | wps 1072.8 | ups 0.09 | wpb 11630.4 | bsz 408.6 | num_updates 659 | lr 0.000121967 | gnorm 0.624 | clip 0 | train_wall 6905 | gb_free 38.8 | wall 7185
+2023-01-20 04:50:45 | INFO | fairseq.data.iterators | grouped total_num_itrs = 659
+2023-01-20 04:50:45 | INFO | fairseq.trainer | begin training epoch 2
+2023-01-20 04:50:45 | INFO | fairseq_cli.train | Start iterating over samples
+2023-01-20 04:58:04 | INFO | train_inner | epoch 002:     41 / 659 loss=6.674, nll_loss=6.674, total=11362.1, n_correct=2874.68, ppl=102.11, accuracy=25.301, wps=1048.2, ups=0.09, wpb=11362.1, bsz=379, num_updates=700, lr=0.000123333, gnorm=0.564, clip=0, train_wall=516, gb_free=38.4, wall=7624
+2023-01-20 05:06:52 | INFO | train_inner | epoch 002:     91 / 659 loss=6.584, nll_loss=6.584, total=11527.5, n_correct=2984.1, ppl=95.9, accuracy=25.887, wps=1092.5, ups=0.09, wpb=11527.5, bsz=398.6, num_updates=750, lr=0.000125, gnorm=0.572, clip=0, train_wall=522, gb_free=38.5, wall=8152
+2023-01-20 05:15:36 | INFO | train_inner | epoch 002:    141 / 659 loss=6.507, nll_loss=6.507, total=11597.8, n_correct=3061.14, ppl=90.93, accuracy=26.394, wps=1106.4, ups=0.1, wpb=11597.8, bsz=399.7, num_updates=800, lr=0.000126667, gnorm=0.595, clip=0, train_wall=519, gb_free=38.7, wall=8676
+2023-01-20 05:24:14 | INFO | train_inner | epoch 002:    191 / 659 loss=6.446, nll_loss=6.446, total=11690.9, n_correct=3130.48, ppl=87.2, accuracy=26.777, wps=1129, ups=0.1, wpb=11690.9, bsz=402.2, num_updates=850, lr=0.000128333, gnorm=0.566, clip=0, train_wall=511, gb_free=38.7, wall=9194
+2023-01-20 05:32:55 | INFO | train_inner | epoch 002:    241 / 659 loss=6.349, nll_loss=6.349, total=11720.9, n_correct=3225.88, ppl=81.52, accuracy=27.522, wps=1124.4, ups=0.1, wpb=11720.9, bsz=424.6, num_updates=900, lr=0.00013, gnorm=0.628, clip=0, train_wall=516, gb_free=37.5, wall=9715
+2023-01-20 05:41:37 | INFO | train_inner | epoch 002:    291 / 659 loss=6.301, nll_loss=6.301, total=11894.8, n_correct=3307.2, ppl=78.86, accuracy=27.804, wps=1139.8, ups=0.1, wpb=11894.8, bsz=432.6, num_updates=950, lr=0.000131667, gnorm=0.594, clip=0, train_wall=516, gb_free=38.5, wall=10237
+2023-01-20 05:50:20 | INFO | train_inner | epoch 002:    341 / 659 loss=6.236, nll_loss=6.236, total=11631.3, n_correct=3278.06, ppl=75.39, accuracy=28.183, wps=1112, ups=0.1, wpb=11631.3, bsz=408, num_updates=1000, lr=0.000133333, gnorm=0.604, clip=0, train_wall=518, gb_free=38.3, wall=10760
+2023-01-20 05:59:00 | INFO | train_inner | epoch 002:    391 / 659 loss=6.191, nll_loss=6.191, total=11627.8, n_correct=3304.2, ppl=73.06, accuracy=28.416, wps=1117.9, ups=0.1, wpb=11627.8, bsz=412.6, num_updates=1050, lr=0.000135, gnorm=0.642, clip=0, train_wall=515, gb_free=38.5, wall=11280
+2023-01-20 06:07:50 | INFO | train_inner | epoch 002:    441 / 659 loss=6.161, nll_loss=6.161, total=11538.9, n_correct=3305.92, ppl=71.56, accuracy=28.65, wps=1088.3, ups=0.09, wpb=11538.9, bsz=402.8, num_updates=1100, lr=0.000136667, gnorm=0.635, clip=0, train_wall=525, gb_free=38.6, wall=11810
+2023-01-20 06:16:35 | INFO | train_inner | epoch 002:    491 / 659 loss=6.121, nll_loss=6.121, total=11550.6, n_correct=3343.04, ppl=69.58, accuracy=28.943, wps=1100.7, ups=0.1, wpb=11550.6, bsz=397.8, num_updates=1150, lr=0.000138333, gnorm=0.629, clip=0, train_wall=520, gb_free=38.9, wall=12335
+2023-01-20 06:25:13 | INFO | train_inner | epoch 002:    541 / 659 loss=6.032, nll_loss=6.032, total=11808.5, n_correct=3508.9, ppl=65.45, accuracy=29.715, wps=1138.1, ups=0.1, wpb=11808.5, bsz=433.4, num_updates=1200, lr=0.00014, gnorm=0.662, clip=0, train_wall=513, gb_free=38.2, wall=12853
+2023-01-20 06:34:07 | INFO | train_inner | epoch 002:    591 / 659 loss=5.998, nll_loss=5.998, total=11572.3, n_correct=3463.36, ppl=63.91, accuracy=29.928, wps=1085.3, ups=0.09, wpb=11572.3, bsz=406.8, num_updates=1250, lr=0.000141667, gnorm=0.69, clip=0, train_wall=528, gb_free=38.7, wall=13387
+2023-01-20 06:42:43 | INFO | train_inner | epoch 002:    641 / 659 loss=5.964, nll_loss=5.964, total=11662.1, n_correct=3504.16, ppl=62.44, accuracy=30.047, wps=1128.3, ups=0.1, wpb=11662.1, bsz=411.2, num_updates=1300, lr=0.000143333, gnorm=0.652, clip=0, train_wall=512, gb_free=38.2, wall=13903
+2023-01-20 06:45:39 | INFO | fairseq_cli.train | begin validation on "dev_st" subset
+2023-01-20 06:45:56 | INFO | dev_st | epoch 002 | valid on 'dev_st' subset | loss 5.613 | nll_loss 5.613 | total 690.117 | n_correct 227.833 | ppl 48.96 | accuracy 33.014 | wps 2514.3 | wpb 690.1 | bsz 23.5 | num_updates 1318 | best_loss 5.613
+2023-01-20 06:45:56 | INFO | fairseq.checkpoint_utils | Preparing to save checkpoint for epoch 2 @ 1318 updates
+2023-01-20 06:45:56 | INFO | fairseq.trainer | Saving checkpoint to /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint2.pt
+2023-01-20 06:45:57 | INFO | fairseq.trainer | Finished saving checkpoint to /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint2.pt
+2023-01-20 06:45:59 | INFO | fairseq.checkpoint_utils | Saved checkpoint /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint2.pt (epoch 2 @ 1318 updates, score 5.613) (writing took 2.8592152227647603 seconds)
+2023-01-20 06:45:59 | INFO | fairseq_cli.train | end of epoch 2 (average epoch stats below)
+2023-01-20 06:45:59 | INFO | train | epoch 002 | loss 6.258 | nll_loss 6.258 | total 11630.4 | n_correct 3264.75 | ppl 76.55 | accuracy 28.071 | wps 1108.5 | ups 0.1 | wpb 11630.4 | bsz 408.6 | num_updates 1318 | lr 0.000143933 | gnorm 0.62 | clip 0 | train_wall 6822 | gb_free 38.9 | wall 14099
+2023-01-20 06:45:59 | INFO | fairseq.data.iterators | grouped total_num_itrs = 659
+2023-01-20 06:45:59 | INFO | fairseq.trainer | begin training epoch 3
+2023-01-20 06:45:59 | INFO | fairseq_cli.train | Start iterating over samples
+2023-01-20 06:51:39 | INFO | train_inner | epoch 003:     32 / 659 loss=5.878, nll_loss=5.878, total=11664.6, n_correct=3578.06, ppl=58.82, accuracy=30.674, wps=1089.1, ups=0.09, wpb=11664.6, bsz=414.1, num_updates=1350, lr=0.000145, gnorm=0.693, clip=0, train_wall=509, gb_free=38.4, wall=14439
+2023-01-20 07:00:52 | INFO | train_inner | epoch 003:     82 / 659 loss=5.859, nll_loss=5.859, total=11565.1, n_correct=3559.56, ppl=58.06, accuracy=30.778, wps=1045.7, ups=0.09, wpb=11565.1, bsz=397.6, num_updates=1400, lr=0.000146667, gnorm=0.686, clip=0, train_wall=548, gb_free=38.4, wall=14992
+2023-01-20 07:09:38 | INFO | train_inner | epoch 003:    132 / 659 loss=5.819, nll_loss=5.819, total=11552.6, n_correct=3581.52, ppl=56.43, accuracy=31.002, wps=1098.8, ups=0.1, wpb=11552.6, bsz=402.7, num_updates=1450, lr=0.000148333, gnorm=0.693, clip=0, train_wall=520, gb_free=39, wall=15517
+2023-01-20 07:18:28 | INFO | train_inner | epoch 003:    182 / 659 loss=5.779, nll_loss=5.779, total=11603.4, n_correct=3647.84, ppl=54.9, accuracy=31.438, wps=1094.9, ups=0.09, wpb=11603.4, bsz=413, num_updates=1500, lr=0.00015, gnorm=0.753, clip=0, train_wall=525, gb_free=36.8, wall=16047
+2023-01-20 07:27:23 | INFO | train_inner | epoch 003:    232 / 659 loss=5.76, nll_loss=5.76, total=11591.3, n_correct=3661.38, ppl=54.18, accuracy=31.587, wps=1082.8, ups=0.09, wpb=11591.3, bsz=410.7, num_updates=1550, lr=0.000151667, gnorm=0.722, clip=0, train_wall=530, gb_free=39, wall=16583
+2023-01-20 07:35:56 | INFO | train_inner | epoch 003:    282 / 659 loss=5.728, nll_loss=5.728, total=11593, n_correct=3673.34, ppl=53.01, accuracy=31.686, wps=1129.9, ups=0.1, wpb=11593, bsz=399.2, num_updates=1600, lr=0.000153333, gnorm=0.73, clip=0, train_wall=508, gb_free=38, wall=17096
+2023-01-20 07:44:33 | INFO | train_inner | epoch 003:    332 / 659 loss=5.65, nll_loss=5.65, total=11762.4, n_correct=3813.7, ppl=50.2, accuracy=32.423, wps=1136.8, ups=0.1, wpb=11762.4, bsz=427.3, num_updates=1650, lr=0.000155, gnorm=0.722, clip=0, train_wall=512, gb_free=38, wall=17613
+2023-01-20 07:53:08 | INFO | train_inner | epoch 003:    382 / 659 loss=5.64, nll_loss=5.64, total=11574.6, n_correct=3748.52, ppl=49.87, accuracy=32.386, wps=1124.7, ups=0.1, wpb=11574.6, bsz=402.2, num_updates=1700, lr=0.000156667, gnorm=0.755, clip=0, train_wall=509, gb_free=38.1, wall=18128
+2023-01-20 08:01:57 | INFO | train_inner | epoch 003:    432 / 659 loss=5.618, nll_loss=5.618, total=11512.7, n_correct=3749.94, ppl=49.12, accuracy=32.572, wps=1088.5, ups=0.09, wpb=11512.7, bsz=395.4, num_updates=1750, lr=0.000158333, gnorm=0.764, clip=0, train_wall=524, gb_free=38.4, wall=18656
+2023-01-20 08:10:33 | INFO | train_inner | epoch 003:    482 / 659 loss=5.548, nll_loss=5.548, total=11954.1, n_correct=3980, ppl=46.78, accuracy=33.294, wps=1157.5, ups=0.1, wpb=11954.1, bsz=434.9, num_updates=1800, lr=0.00016, gnorm=0.74, clip=0, train_wall=511, gb_free=38.8, wall=19173
+2023-01-20 08:19:21 | INFO | train_inner | epoch 003:    532 / 659 loss=5.507, nll_loss=5.507, total=11937.6, n_correct=4013, ppl=45.48, accuracy=33.616, wps=1130, ups=0.09, wpb=11937.6, bsz=444.9, num_updates=1850, lr=0.000161667, gnorm=0.751, clip=0, train_wall=523, gb_free=38.3, wall=19701
+2023-01-20 08:28:01 | INFO | train_inner | epoch 003:    582 / 659 loss=5.528, nll_loss=5.528, total=11625.8, n_correct=3872.66, ppl=46.13, accuracy=33.311, wps=1118.6, ups=0.1, wpb=11625.8, bsz=399.6, num_updates=1900, lr=0.000163333, gnorm=0.787, clip=0, train_wall=514, gb_free=38.6, wall=20221
+2023-01-20 08:37:07 | INFO | train_inner | epoch 003:    632 / 659 loss=5.505, nll_loss=5.505, total=11321.7, n_correct=3775.74, ppl=45.41, accuracy=33.349, wps=1036.2, ups=0.09, wpb=11321.7, bsz=373.8, num_updates=1950, lr=0.000165, gnorm=0.835, clip=0, train_wall=541, gb_free=38.2, wall=20767
+2023-01-20 08:41:42 | INFO | fairseq_cli.train | begin validation on "dev_st" subset
+2023-01-20 08:42:00 | INFO | dev_st | epoch 003 | valid on 'dev_st' subset | loss 5.136 | nll_loss 5.136 | total 690.117 | n_correct 255.733 | ppl 35.15 | accuracy 37.057 | wps 2521.8 | wpb 690.1 | bsz 23.5 | num_updates 1977 | best_loss 5.136
+2023-01-20 08:42:00 | INFO | fairseq.checkpoint_utils | Preparing to save checkpoint for epoch 3 @ 1977 updates
+2023-01-20 08:42:00 | INFO | fairseq.trainer | Saving checkpoint to /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint3.pt
+2023-01-20 08:42:01 | INFO | fairseq.trainer | Finished saving checkpoint to /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint3.pt
+2023-01-20 08:42:02 | INFO | fairseq.checkpoint_utils | Saved checkpoint /nfs/hpc/share/raffelm/research/paper_models/ICML/simulst_models/model9/checkpoint3.pt (epoch 3 @ 1977 updates, score 5.136) (writing took 2.6513328230939806 seconds)
+2023-01-20 08:42:02 | INFO | fairseq_cli.train | end of epoch 3 (average epoch stats below)
+2023-01-20 08:42:02 | INFO | train | epoch 003 | loss 5.663 | nll_loss 5.663 | total 11630.4 | n_correct 3753.97 | ppl 50.67 | accuracy 32.277 | wps 1100.7 | ups 0.09 | wpb 11630.4 | bsz 408.6 | num_updates 1977 | lr 0.0001659 | gnorm 0.746 | clip 0 | train_wall 6872 | gb_free 39.1 | wall 21062
+2023-01-20 08:42:02 | INFO | fairseq.data.iterators | grouped total_num_itrs = 659
+2023-01-20 08:42:02 | INFO | fairseq.trainer | begin training epoch 4
+2023-01-20 08:42:02 | INFO | fairseq_cli.train | Start iterating over samples
+2023-01-20 08:46:01 | INFO | train_inner | epoch 004:     23 / 659 loss=5.421, nll_loss=5.421, total=11529.6, n_correct=3933.72, ppl=42.84, accuracy=34.118, wps=1080.7, ups=0.09, wpb=11529.6, bsz=408.5, num_updates=2000, lr=0.000166667, gnorm=0.829, clip=0, train_wall=508, gb_free=38.6, wall=21300
+2023-01-20 08:54:52 | INFO | train_inner | epoch 004:     73 / 659 loss=5.381, nll_loss=5.381, total=11613.1, n_correct=3991.08, ppl=41.66, accuracy=34.367, wps=1092.6, ups=0.09, wpb=11613.1, bsz=397.9, num_updates=2050, lr=0.000168333, gnorm=0.806, clip=0, train_wall=526, gb_free=38.5, wall=21832
+2023-01-20 09:03:40 | INFO | train_inner | epoch 004:    123 / 659 loss=5.362, nll_loss=5.362, total=11414, n_correct=3943.78, ppl=41.12, accuracy=34.552, wps=1082, ups=0.09, wpb=11414, bsz=381.8, num_updates=2100, lr=0.00017, gnorm=0.846, clip=0, train_wall=522, gb_free=38.3, wall=22359
+2023-01-20 09:12:29 | INFO | train_inner | epoch 004:    173 / 659 loss=5.329, nll_loss=5.329, total=11742.6, n_correct=4092.28, ppl=40.21, accuracy=34.85, wps=1108.4, ups=0.09, wpb=11742.6, bsz=419.1, num_updates=2150, lr=0.000171667, gnorm=0.825, clip=0, train_wall=524, gb_free=38.5, wall=22889
+2023-01-20 09:21:25 | INFO | train_inner | epoch 004:    223 / 659 loss=5.322, nll_loss=5.322, total=11391.5, n_correct=3963.88, ppl=40.01, accuracy=34.797, wps=1062.9, ups=0.09, wpb=11391.5, bsz=387.5, num_updates=2200, lr=0.000173333, gnorm=0.851, clip=0, train_wall=531, gb_free=38.4, wall=23425
+2023-01-20 09:30:04 | INFO | train_inner | epoch 004:    273 / 659 loss=5.283, nll_loss=5.283, total=11638.3, n_correct=4099.3, ppl=38.93, accuracy=35.223, wps=1122.3, ups=0.1, wpb=11638.3, bsz=408, num_updates=2250, lr=0.000175, gnorm=0.852, clip=0, train_wall=513, gb_free=38.6, wall=23943
+2023-01-20 09:38:40 | INFO | train_inner | epoch 004:    323 / 659 loss=5.237, nll_loss=5.237, total=11824.6, n_correct=4199.18, ppl=37.71, accuracy=35.512, wps=1144.9, ups=0.1, wpb=11824.6, bsz=420.2, num_updates=2300, lr=0.000176667, gnorm=0.904, clip=0, train_wall=511, gb_free=38.8, wall=24460
+2023-01-20 09:47:20 | INFO | train_inner | epoch 004:    373 / 659 loss=5.231, nll_loss=5.231, total=11659.3, n_correct=4158.6, ppl=37.54, accuracy=35.668, wps=1120.2, ups=0.1, wpb=11659.3, bsz=412.4, num_updates=2350, lr=0.000178333, gnorm=0.887, clip=0, train_wall=515, gb_free=38.4, wall=24980
+2023-01-20 09:56:11 | INFO | train_inner | epoch 004:    423 / 659 loss=5.192, nll_loss=5.192, total=11563.6, n_correct=4154.74, ppl=36.55, accuracy=35.929, wps=1089.2, ups=0.09, wpb=11563.6, bsz=407.5, num_updates=2400, lr=0.00018, gnorm=0.879, clip=0, train_wall=526, gb_free=38.7, wall=25511
+2023-01-20 10:04:45 | INFO | train_inner | epoch 004:    473 / 659 loss=5.172, nll_loss=5.172, total=11720.1, n_correct=4233.96, ppl=36.05, accuracy=36.126, wps=1140.4, ups=0.1, wpb=11720.1, bsz=416.3, num_updates=2450, lr=0.000181667, gnorm=0.883, clip=0, train_wall=509, gb_free=38.7, wall=26025
+2023-01-20 10:13:20 | INFO | train_inner | epoch 004:    523 / 659 loss=5.126, nll_loss=5.126, total=11766.2, n_correct=4275.86, ppl=34.93, accuracy=36.34, wps=1141.6, ups=0.1, wpb=11766.2, bsz=412.9, num_updates=2500, lr=0.000183333, gnorm=0.896, clip=0, train_wall=510, gb_free=38.7, wall=26540

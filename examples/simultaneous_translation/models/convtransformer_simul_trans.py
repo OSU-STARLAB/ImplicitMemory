@@ -25,6 +25,11 @@ from fairseq.models.speech_to_text.modules.augmented_memory_attention_test impor
     SequenceEncoder_test,
     AugmentedMemoryConvTransformerEncoder_test,
 )
+from fairseq.models.speech_to_text.modules.augmented_memory_attention_testXL import (
+    augmented_memory_testXL,
+    SequenceEncoder_testXL,
+    AugmentedMemoryConvTransformerEncoder_testXL,
+)
 from fairseq.models.speech_to_text.modules.augmented_memory_attention_XL import (
     augmented_memory_XL,
     SequenceEncoder_XL,
@@ -134,6 +139,26 @@ class AugmentedMemoryConvTransformerModel_test(SimulConvTransformerModel):
 def augmented_memory_test_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
+#TestXL Augmented Memory Transormer
+@register_model("convtransformer_augmented_memory_testXL")
+@augmented_memory_testXL
+class AugmentedMemoryConvTransformerModel_testXL(SimulConvTransformerModel):
+    @classmethod
+    def build_encoder(cls, args):
+        encoder = SequenceEncoder_testXL(args, AugmentedMemoryConvTransformerEncoder_testXL(args))
+
+        if getattr(args, "load_pretrained_encoder_from", None) is not None:
+            encoder = checkpoint_utils.load_pretrained_component_from_model(
+                component=encoder, checkpoint=args.load_pretrained_encoder_from
+            )
+
+        return encoder
+
+@register_model_architecture(
+    "convtransformer_augmented_memory_testXL", "convtransformer_augmented_memory_testXL"
+)
+def augmented_memory_testXL_convtransformer_espnet(args):
+    convtransformer_espnet(args)
 #XL Augmented Memory Transormer
 @register_model("convtransformer_augmented_memory_XL")
 @augmented_memory_XL
