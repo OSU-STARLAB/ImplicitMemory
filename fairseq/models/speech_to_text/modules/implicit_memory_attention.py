@@ -19,15 +19,8 @@ from fairseq.models.speech_to_text.utils import (
     sequence_to_segments,
 )
 from fairseq.modules import MultiheadAttention, TransformerEncoderLayer
-from fairseq.modules.quant_noise import quant_noise
 from torch import nn, Tensor
-import time
 import json
-
-# ------------------------------------------------------------------------------
-#   AugmentedMemoryConvTransformerEncoder
-# ------------------------------------------------------------------------------
-
 
 class RelativePositionEmbedding(nn.Module):
     """
@@ -48,7 +41,11 @@ class RelativePositionEmbedding(nn.Module):
         output = nn.functional.embedding(input.long(), self.embeddings)
         return output
 
-class AugmentedMemoryConvTransformerEncoder_testXL(ConvTransformerEncoder):
+# ------------------------------------------------------------------------------
+#   ImplicitMemoryTransformerEncoder
+# ------------------------------------------------------------------------------
+
+class ImplicitMemoryTransformerEncoder(ConvTransformerEncoder):
     def __init__(self, args):
         super().__init__(args)
 
@@ -66,18 +63,17 @@ class AugmentedMemoryConvTransformerEncoder_testXL(ConvTransformerEncoder):
         if encoder_weight_share_list is None:
             encoder_weight_share_list = []
         else:
-            shared_weights_layer = AugmentedMemoryTransformerEncoderLayer(args)
+            shared_weights_layer = ImplicitMemoryTransformerEncoderLayer(args)
         print(f"Encoder: Sharing layers: {encoder_weight_share_list}")
         for layer_idx in range(args.encoder_layers):
             if layer_idx+1 in encoder_weight_share_list:
                 self.transformer_layers.append(shared_weights_layer)
             else:
-                self.transformer_layers.append(AugmentedMemoryTransformerEncoderLayer(args))
+                self.transformer_layers.append(ImplicitMemoryTransformerEncoderLayer(args))
 
         self.share_mem_bank_layers = getattr(args, "share_mem_bank_layers", None)
         self.max_relative_position = getattr(args, "max_relative_position", 0)
 
-        self.variable_left_context_method = getattr(args, "variable_left_context_method", None)
 
     def initialize_states(self, states):
         if states is None:
@@ -111,16 +107,22 @@ class AugmentedMemoryConvTransformerEncoder_testXL(ConvTransformerEncoder):
         distance_clamp = distance_clamp.to(input.device).long().detach()
         return distance_clamp
 
-    def forward(self, src_tokens, src_lengths, left_context_size, right_context_size, states=None, prev_output=None):
+    def get_memory_size(self, memory):
+        mem_size = len(memory)
+        if mem_size*self.segment_size > self.left_context:
+            return self.left_context
+        elif mem_size == 0:
+            return 0
+        else:
+            return mem_size*self.segment_size
+
+    def forward(self, src_tokens, src_lengths, states=None):
         """Encode input sequence.
         :param torch.Tensor xs: input tensor
         :param torch.Tensor masks: input mask
         :return: position embedded tensor and mask
         :rtype Tuple[torch.Tensor, torch.Tensor]:
         """
-        left_context_size = left_context_size // self.encoder_stride
-        right_context_size = ceil(right_context_size / self.encoder_stride)
-        
         bsz, max_seq_len, _ = src_tokens.size()
         x = (
             src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
@@ -140,13 +142,6 @@ class AugmentedMemoryConvTransformerEncoder_testXL(ConvTransformerEncoder):
             x.size(0) * src_lengths.new_ones([src_lengths.size(0)]).long(),
         )
 
-        if self.variable_left_context_method == "output":
-            x_dim = x.size(0)
-            if x_dim < self.segment_size and prev_output is not None:
-                left_context_size = self.segment_size-x_dim
-                prev_output = prev_output[self.segment_size-left_context_size:]
-                x = torch.cat([prev_output] + [x], dim=0)
-                input_lengths = input_lengths + left_context_size
 
         encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
             input_lengths, batch_first=True
@@ -161,7 +156,8 @@ class AugmentedMemoryConvTransformerEncoder_testXL(ConvTransformerEncoder):
         # State to store memory banks etc.
         states = self.initialize_states(states)
         if self.max_relative_position > 0:
-            rpe = self.get_relative_position(x, left_context_size)
+            mem_size = self.get_memory_size(states[0]["memory_banks"])
+            rpe = self.get_relative_position(x, mem_size)
         else:
             rpe = None
 
@@ -170,16 +166,16 @@ class AugmentedMemoryConvTransformerEncoder_testXL(ConvTransformerEncoder):
             # (self.left_size + self.segment_size + self.right_size)
             # / self.stride, num_heads, dim
             # TODO: Consider mask here 
-            x = layer(x, states[i], i, rpe, left_context_size, right_context_size)
-            if right_context_size != 0:
-                states[i]["encoder_states"] = x[left_context_size : -right_context_size]
+            x = layer(x, states[i], i, rpe)
+            if self.right_context != 0:
+                states[i]["encoder_states"] = x[0 : -self.right_context]
             else:
-                states[i]["encoder_states"] = x[left_context_size : ]
+                states[i]["encoder_states"] = x[0 : ]
 
-        if right_context_size != 0:
+        if self.right_context != 0:
             lengths = (
                 (
-                    ~encoder_padding_mask[:, left_context_size : -right_context_size]
+                    ~encoder_padding_mask[:, 0 : -self.right_context]
                 )
                 .sum(dim=1, keepdim=True)
                 .long()
@@ -187,18 +183,18 @@ class AugmentedMemoryConvTransformerEncoder_testXL(ConvTransformerEncoder):
         else:
             lengths = (
                 (
-                    ~encoder_padding_mask[:, left_context_size :]
+                    ~encoder_padding_mask[:, 0 :]
                 )
                 .sum(dim=1, keepdim=True)
                 .long()
             )
 
-        return states[-1]["encoder_states"], lengths, states, states[-1]["encoder_states"]
+        return states[-1]["encoder_states"], lengths, states
 
 # ------------------------------------------------------------------------------
 #   AugmentedMemoryTransformerEncoderLayer
 # ------------------------------------------------------------------------------
-class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
+class ImplicitMemoryTransformerEncoderLayer(TransformerEncoderLayer):
     def __init__(self, args):
         super().__init__(args)
         self.share_mem_bank_layers = getattr(args, "share_mem_bank_layers", None)
@@ -208,48 +204,15 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
         self.max_memory = ceil(self.left_context/self.segment_size) + 1
         self.enable_left_grad = getattr(args, "enable_left_grad", False)
 
-        self.normalize_left = getattr(args, "normalize_left", False)
-        if self.normalize_left and self.enable_left_grad:
-            self.mem_layer_norm = torch.nn.LayerNorm(args.encoder_embed_dim)
-        elif self.normalize_left and not self.enable_left_grad:
-            self.mem_layer_norm = torch.nn.LayerNorm(args.encoder_embed_dim, elementwise_affine=False)
-
-        self.feed_forward_mem = getattr(args, "feed_forward_mem", False)
-        if self.feed_forward_mem:
-            self.mem_fc1 = quant_noise(torch.nn.Linear(self.embed_dim, self.encoder_ffn_embed_dim), self.quant_noise, self.quant_noise_block_size)
-            self.mem_activation = torch.nn.functional.relu
-            self.mem_fc2 = quant_noise(torch.nn.Linear(self.encoder_ffn_embed_dim, self.embed_dim), self.quant_noise, self.quant_noise_block_size)
-    
-    def process_output(self, output):
-        if self.normalize_left:
-            if self.feed_forward_mem:
-                residual = output
-                output = self.mem_activation(self.mem_fc1(output))
-                output = self.activation_dropout_module(output)
-                output = self.mem_fc2(output)
-                output = self.dropout_module(output)
-                output = self.mem_layer_norm(output+residual)
-            else:
-                output = self.mem_layer_norm(output)
-        return output
-
-    def update_memory(self, state, output, layer_num, new_left_context, new_right_context):
-        if new_right_context != 0:
-            output = output[new_left_context:-new_right_context]
-        else:
-            output = output[new_left_context:]
-
+    def update_memory(self, state, output, layer_num):
         if self.share_mem_bank_layers is not None:
           if not any(layer_num in layer for layer in self.share_mem_bank_layers):
-            output = self.process_output(output)
             state["memory_banks"].append(output)
           else:
             for pairs in self.share_mem_bank_layers:
                 if layer_num == pairs[0]:
-                    output = self.process_output(output)
                     state["memory_banks"].append(output)        
         else:
-            output = self.process_output(output)
             state["memory_banks"].append(output) 
         
         if len(state["memory_banks"]) > self.max_memory:
@@ -257,13 +220,13 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
         return state
 
-    def forward(self, x, state, layer_num, rpe, new_left_context, new_right_context):
+    def forward(self, x, state, layer_num, rpe):
         residual = x
 
         if self.normalize_before:
             x = self.self_attn_layer_norm(x)
 
-        x = self.self_attn(input=x, state=state, layer_num=layer_num, rpe=rpe, new_left_context=new_left_context, new_right_context=new_right_context)
+        x = self.self_attn(input=x, state=state, layer_num=layer_num, rpe=rpe)
 
         x = self.dropout_module(x)
 
@@ -285,14 +248,14 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             x = self.final_layer_norm(x)
 
         if self.left_context_method == "output" and not self.enable_left_grad:
-            self.update_memory(state, x.detach(), layer_num, new_left_context=0, new_right_context=0)
+            self.update_memory(state, x.detach(), layer_num)
         elif self.left_context_method == "output" and self.enable_left_grad:
-            self.update_memory(state, x, layer_num, new_left_context=0, new_right_context=0)
+            self.update_memory(state, x, layer_num)
 
         return x
 
     def build_self_attention(self, embed_dim, args):
-        return AugmentedMemoryMultiheadAttention(
+        return ImplicitMemoryMultiheadAttention(
             embed_dim=embed_dim,
             num_heads=args.encoder_attention_heads,
             attention_dropout=args.attention_dropout,
@@ -305,14 +268,13 @@ class AugmentedMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             left_context=args.left_context // args.encoder_stride,
             segment_size = args.segment_size // args.encoder_stride,
             enable_left_grad = getattr(args, "enable_left_grad", False),
-            disable_suppression=getattr(args, "disable_suppression", False),
         )
 
 
 # ------------------------------------------------------------------------------
 #   AugmentedMemoryMultiheadAttention
 # ------------------------------------------------------------------------------
-class AugmentedMemoryMultiheadAttention(MultiheadAttention):
+class ImplicitMemoryMultiheadAttention(MultiheadAttention):
     """
     Augmented Memory Attention from
     Streaming Transformer-based Acoustic Models
@@ -335,7 +297,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         q_noise=0.0,
         qn_block_size=8,
         memory_dim=None,
-        disable_suppression=False,  # 0.5 based on https://arxiv.org/abs/2005.09137
+        std_scale=0.5,  # 0.5 based on https://arxiv.org/abs/2005.09137
         disable_mem_on_mem_attn=True,
         share_mem_bank_layers=None,
         max_relative_position=0,
@@ -360,10 +322,8 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         )
 
         self.memory_dim = memory_dim if memory_dim is not None else embed_dim
-        if disable_suppression:
-            self.std_scale = None
-        else:
-            self.std_scale = 0.5
+
+        self.std_scale = std_scale
         self.disable_mem_on_mem_attn = disable_mem_on_mem_attn
 
         # This Operator was used for factorization in PySpeech
@@ -392,12 +352,7 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
             self.rpe_k = None
             self.rpe_v = None
 
-    def update_memory(self, state, output, layer_num, new_left_context, new_right_context):
-        if new_right_context != 0:
-            output = output[new_left_context:-new_right_context]
-        else:
-            output = output[new_left_context:]
-
+    def update_memory(self, state, output, layer_num):
         if self.share_mem_bank_layers is not None:
           if not any(layer_num in layer for layer in self.share_mem_bank_layers):
             state["memory_banks"].append(output)
@@ -413,30 +368,27 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 
         return state
 
-    def add_memory(self, input, memory, new_left_context):
+    def add_memory(self, input, memory):
         memory_and_input = input
         if memory != []:
             memory = torch.cat(memory, dim=0)
-            if new_left_context != 0:
-                memory = memory[:-new_left_context]
             if memory.size(0) > self.left_context:
                 memory = memory[memory.size(0)-self.left_context:]
                 
             memory_and_input = torch.cat([memory] + [input], dim=0)
         return memory_and_input
 
-    def forward(self, input, state, layer_num, rpe, new_left_context, new_right_context):
+    def forward(self, input, state, layer_num, rpe):
         """
         input: Encoder states of current segment with left or right context,
             plus one summarization query
 
         """
-        self.left_context = new_left_context
         length, batch_size, _ = input.shape
 
         memory = state["memory_banks"]
 
-        memory_and_input = self.add_memory(input, memory, new_left_context=0)
+        memory_and_input = self.add_memory(input, memory)
 
         q = self.q_proj(self.v2e(input))
         k = self.k_proj(self.v2e(memory_and_input))
@@ -473,6 +425,12 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         if self.std_scale is not None:
             attention_weights = attention_suppression(attention_weights, self.std_scale)
 
+        assert list(attention_weights.shape) == [
+            batch_size * self.num_heads,
+            length,
+            length + (0 if len(memory) == 0 else self.left_context if len(memory)*self.segment_size > self.left_context else len(memory)*self.segment_size),
+        ]
+
         attention_weights = torch.nn.functional.softmax(
             attention_weights.float(), dim=-1
         ).type_as(attention_weights)
@@ -490,6 +448,12 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
 
             attention = attention + attention_rpe
 
+        assert list(attention.shape) == [
+            batch_size * self.num_heads,
+            length,
+            self.head_dim,
+        ]
+
         attention = (
             attention.transpose(0, 1)
             .contiguous()
@@ -499,22 +463,21 @@ class AugmentedMemoryMultiheadAttention(MultiheadAttention):
         output = self.out_proj(attention)
         
         if self.left_context_method == "input" and not self.enable_left_grad:
-            self.update_memory(state, input.detach(), layer_num, new_left_context=0, new_right_context=0)
+            self.update_memory(state, input.detach(), layer_num)
         elif self.left_context_method == "input" and self.enable_left_grad:
-            self.update_memory(state, input, layer_num, new_left_context=0, new_right_context=0)
+            self.update_memory(state, input, layer_num)
 
         if self.left_context_method == "pre_output" and not self.enable_left_grad:
-            self.update_memory(state, output.detach(), layer_num, new_left_context=0, new_right_context=0)
+            self.update_memory(state, output.detach(), layer_num)
         elif self.left_context_method == "pre_output" and self.enable_left_grad:
-            self.update_memory(state, output, layer_num, new_left_context=0, new_right_context=0)
+            self.update_memory(state, output, layer_num)
 
         return output
-
 
 # ------------------------------------------------------------------------------
 #   SequenceEncoder
 # ------------------------------------------------------------------------------
-class SequenceEncoder_testXL(FairseqEncoder):
+class ImplicitSequenceEncoder(FairseqEncoder):
     """
     SequenceEncoder encodes sequences.
 
@@ -544,9 +507,6 @@ class SequenceEncoder_testXL(FairseqEncoder):
         self.segment_size = args.segment_size
         self.left_context = args.left_context
         self.right_context = args.right_context
-        self.variable_left_context_method = getattr(args, "variable_left_context_method", None)
-        self.shift_right_context = getattr(args, "shift_right_context", False)
-        self.transformer_layers = args.encoder_layers
         
     def forward(
         self,
@@ -554,28 +514,48 @@ class SequenceEncoder_testXL(FairseqEncoder):
         src_lengths: Tensor,
         states=None,
     ):
-        times = []
-        prev_output = None
-        states = [{"memory_banks": [torch.randn(16, 1, 256) for _ in range(10)], "encoder_states": None} for i in range(self.transformer_layers)]
-        for left_context_size in [16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 256]:
-            seg_src_lengths = torch.Tensor([64])
-            for i in range(10):
-                seg_src_tokens = torch.randn(1, 64, 80)
-                start = time.time()
-                (_, _, states, _) = self.module(
-                seg_src_tokens,
-                seg_src_lengths,
-                left_context_size,
-                right_context_size=0,
-                states=states,
-                prev_output=prev_output,
-                )
-                end = time.time()
-                times.append(end-start)
-            print("Average time for ", left_context_size, " is ", sum(times)/len(times))
-                    
 
-        return
+        seg_src_tokens_lengths = sequence_to_segments(
+            sequence=src_tokens,
+            time_axis=self.input_time_axis,
+            lengths=src_lengths,
+            segment_size=self.segment_size,
+            extra_left_context=0,
+            extra_right_context=self.right_context,
+        )
+
+        seg_encoder_states_lengths: List[Tuple[Tensor, Tensor]] = []
+
+        for seg_src_tokens, seg_src_lengths in seg_src_tokens_lengths:
+            src_tokens = seg_src_tokens
+
+            (seg_encoder_states, seg_enc_lengths, states) = self.module(
+            seg_src_tokens,
+            seg_src_lengths,
+            states=states,
+            )
+
+            seg_encoder_states_lengths.append((seg_encoder_states, seg_enc_lengths))
+            
+        encoder_out, enc_lengths = segments_to_sequence(
+            segments=seg_encoder_states_lengths, time_axis=self.output_time_axis
+        )
+
+        encoder_padding_mask, _ = lengths_to_encoder_padding_mask(
+            enc_lengths, batch_first=True
+        )
+
+        if not encoder_padding_mask.any():
+            encoder_padding_mask = None
+
+        return {
+            "encoder_out": [encoder_out],
+            "encoder_padding_mask": [encoder_padding_mask],
+            "encoder_embedding": [],
+            "encoder_states": [states],
+            "src_tokens": [],
+            "src_lengths": [],
+        }
 
     def incremental_encode(
         self,
@@ -598,7 +578,7 @@ class SequenceEncoder_testXL(FairseqEncoder):
 # ------------------------------------------------------------------------------
 #   Augmented memory model decorator
 # ------------------------------------------------------------------------------
-def augmented_memory_testXL(klass):
+def implicit_memory(klass):
     class StreamSeq2SeqModel(klass):
         @staticmethod
         def add_args(parser):
@@ -625,37 +605,19 @@ def augmented_memory_testXL(klass):
                 help="The list of memory bank sharing layers",
             )
             parser.add_argument(
-                "--variable-left-context-method",
-                default=None,
-                choices=["input", "output"],
-                help="Left context strategy for variable length left context"
-            )
-            parser.add_argument(
                 "--left-context-method",
                 default="input",
                 choices=["input", "pre_output", "output"],
                 help="Left context strategy for normal left context"
             )
             parser.add_argument(
-                "--shift-right-context",
-                action="store_true",
-                default=False,
-                help="if True, squash memory banks",
+                "--max-relative-position",
+                type=int,
+                default=0,
+                help="Relative Position",
             )
             parser.add_argument(
                 "--enable-left-grad",
-                action="store_true",
-                default=False,
-                help="if True, squash memory banks",
-            )
-            parser.add_argument(
-                "--normalize-left",
-                action="store_true",
-                default=False,
-                help="if True, squash memory banks",
-            )
-            parser.add_argument(
-                "--feed-forward-mem",
                 action="store_true",
                 default=False,
                 help="if True, squash memory banks",

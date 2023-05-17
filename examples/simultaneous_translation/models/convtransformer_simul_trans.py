@@ -20,20 +20,10 @@ from fairseq.models.speech_to_text.modules.augmented_memory_attention import (
     SequenceEncoder,
     AugmentedMemoryConvTransformerEncoder,
 )
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_test import (
-    augmented_memory_test,
-    SequenceEncoder_test,
-    AugmentedMemoryConvTransformerEncoder_test,
-)
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_testXL import (
-    augmented_memory_testXL,
-    SequenceEncoder_testXL,
-    AugmentedMemoryConvTransformerEncoder_testXL,
-)
-from fairseq.models.speech_to_text.modules.augmented_memory_attention_XL import (
-    augmented_memory_XL,
-    SequenceEncoder_XL,
-    AugmentedMemoryConvTransformerEncoder_XL,
+from fairseq.models.speech_to_text.modules.implicit_memory_attention import (
+    implicit_memory,
+    ImplicitSequenceEncoder,
+    ImplicitMemoryTransformerEncoder,
 )
 
 from torch import nn, Tensor
@@ -118,13 +108,13 @@ class AugmentedMemoryConvTransformerModel(SimulConvTransformerModel):
 def augmented_memory_convtransformer_espnet(args):
     convtransformer_espnet(args)
 
-#Test Augmented Memory Transormer
-@register_model("convtransformer_augmented_memory_test")
-@augmented_memory_test
-class AugmentedMemoryConvTransformerModel_test(SimulConvTransformerModel):
+#Implicit Memory Transormer
+@register_model("implicit_memory_transformer")
+@implicit_memory
+class ImplicitMemoryTransformerModel(SimulConvTransformerModel):
     @classmethod
     def build_encoder(cls, args):
-        encoder = SequenceEncoder_test(args, AugmentedMemoryConvTransformerEncoder_test(args))
+        encoder = ImplicitSequenceEncoder(args, ImplicitMemoryTransformerEncoder(args))
 
         if getattr(args, "load_pretrained_encoder_from", None) is not None:
             encoder = checkpoint_utils.load_pretrained_component_from_model(
@@ -134,50 +124,9 @@ class AugmentedMemoryConvTransformerModel_test(SimulConvTransformerModel):
         return encoder
 
 @register_model_architecture(
-    "convtransformer_augmented_memory_test", "convtransformer_augmented_memory_test"
+    "implicit_memory_transformer", "implicit_memory_transformer"
 )
-def augmented_memory_test_convtransformer_espnet(args):
-    convtransformer_espnet(args)
-
-#TestXL Augmented Memory Transormer
-@register_model("convtransformer_augmented_memory_testXL")
-@augmented_memory_testXL
-class AugmentedMemoryConvTransformerModel_testXL(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_testXL(args, AugmentedMemoryConvTransformerEncoder_testXL(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_testXL", "convtransformer_augmented_memory_testXL"
-)
-def augmented_memory_testXL_convtransformer_espnet(args):
-    convtransformer_espnet(args)
-#XL Augmented Memory Transormer
-@register_model("convtransformer_augmented_memory_XL")
-@augmented_memory_XL
-class AugmentedMemoryConvTransformerModel_XL(SimulConvTransformerModel):
-    @classmethod
-    def build_encoder(cls, args):
-        encoder = SequenceEncoder_XL(args, AugmentedMemoryConvTransformerEncoder_XL(args))
-
-        if getattr(args, "load_pretrained_encoder_from", None) is not None:
-            encoder = checkpoint_utils.load_pretrained_component_from_model(
-                component=encoder, checkpoint=args.load_pretrained_encoder_from
-            )
-
-        return encoder
-
-@register_model_architecture(
-    "convtransformer_augmented_memory_XL", "convtransformer_augmented_memory_XL"
-)
-def augmented_memory_XL_convtransformer_espnet(args):
+def implicit_memory_convtransformer_espnet(args):
     convtransformer_espnet(args)
 # ============================================================================ #
 #   Convtransformer
