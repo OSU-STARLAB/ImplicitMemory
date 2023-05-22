@@ -1,3 +1,52 @@
+# Implicit Memory Transformer for Computationally Efficient Simultaneous Speech Translation
+
+This repository is a fork of https://github.com/pytorch/fairseq containing the supplementary code used in our ACL 2023 paper Implicit Memory Transformer for Computationally Efficient
+Simultaneous Speech Translation.  Our code is in the `fairseq/models/speech_to_text/modules` folder.
+
+If you use this code, please consider citing our paper.
+
+The script used to run the ASR pretraining experiments on a single GPU for the ACL 2023 paper is the following:
+
+```bash
+save_dir=$1
+data_dir=$2
+
+fairseq-train $data_dir \
+    --config-yaml config_asr.yaml --train-subset train_asr --valid-subset dev_asr \
+    --save-dir $save_dir --num-workers 2 --max-tokens 80000 --max-update 100000 \
+    --task speech_to_text --criterion label_smoothed_cross_entropy \
+    --arch convtransformer_augmented_memory_XL --optimizer adam --adam-betas [0.9,0.98] --lr 0.0007 --lr-scheduler inverse_sqrt \
+    --simul-type waitk_fixed_pre_decision --criterion label_smoothed_cross_entropy --fixed-pre-decision-ratio 8 --waitk-lagging 1 \
+    --warmup-updates 4000 --warmup-init-lr 0.0001 --clip-norm 10.0 --seed 3 --update-freq 4 \
+    --ddp-backend legacy_ddp \
+    --log-interval 50 \
+    --segment-size 64 --right-context 32 --left-context 32 --max-relative-position 16 --left-context-method pre_output \
+    --encoder-normalize-before --decoder-normalize-before --enable-left-grad \
+    --patience 5 --keep-last-epochs 5 \
+```
+The script used to run the SimulST pretraining experiments on a single GPU for the ACL 2023 paper is the following:
+```bash
+save_dir=$1
+pre_train_dir=$2
+data_dir=$3
+
+fairseq-train $data_dir \
+    --task speech_to_text --config-yaml config_st.yaml --train-subset train_st --valid-subset dev_st \
+    --save-dir $save_dir \
+    --load-pretrained-encoder-from $pre_train_dir/checkpoint_average.pt \
+    --arch convtransformer_augmented_memory_XL \
+    --simul-type waitk_fixed_pre_decision --criterion label_smoothed_cross_entropy --fixed-pre-decision-ratio 8 --waitk-lagging 1 \
+    --max-tokens 40000 --num-workers 1 --update-freq 8 \
+    --optimizer adam --adam-betas [0.9,0.98] --lr 0.00035 --lr-scheduler inverse_sqrt --warmup-updates 7500 --warmup-init-lr 0.0001 --clip-norm 10.0 \
+    --max-update 100000 --seed 4 --ddp-backend legacy_ddp --log-interval 50 \
+    --segment-size 64 --right-context 32 --left-context 32 --max-relative-position 16 --left-context-method pre_output \
+    --encoder-normalize-before --decoder-normalize-before --enable-left-grad \
+    --attention-dropout 0.2 --activation-dropout 0.2 --weight-decay 0.0001 \
+    --patience 10 --keep-last-epochs 10 \
+```
+
+Below, there is the original README file.
+
 <p align="center">
   <img src="docs/fairseq_logo.png" width="150">
   <br />
