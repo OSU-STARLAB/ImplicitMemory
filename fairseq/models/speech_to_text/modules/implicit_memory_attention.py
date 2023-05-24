@@ -116,7 +116,7 @@ class ImplicitMemoryTransformerEncoder(ConvTransformerEncoder):
         else:
             return mem_size*self.segment_size
 
-    def forward(self, src_tokens, src_lengths, states=None):
+    def forward(self, src_tokens, src_lengths, right_context_size, states=None):
         """Encode input sequence.
         :param torch.Tensor xs: input tensor
         :param torch.Tensor masks: input mask
@@ -124,6 +124,8 @@ class ImplicitMemoryTransformerEncoder(ConvTransformerEncoder):
         :rtype Tuple[torch.Tensor, torch.Tensor]:
         """
         bsz, max_seq_len, _ = src_tokens.size()
+        right_context_size = ceil(right_context_size / self.encoder_stride)
+        
         x = (
             src_tokens.view(bsz, max_seq_len, self.in_channels, self.input_dim)
             .transpose(1, 2)
@@ -166,16 +168,16 @@ class ImplicitMemoryTransformerEncoder(ConvTransformerEncoder):
             # (self.left_size + self.segment_size + self.right_size)
             # / self.stride, num_heads, dim
             # TODO: Consider mask here 
-            x = layer(x, states[i], i, rpe)
-            if self.right_context != 0:
-                states[i]["encoder_states"] = x[0 : -self.right_context]
+            x = layer(x, states[i], i, rpe, right_context_size)
+            if right_context_size != 0:
+                states[i]["encoder_states"] = x[0 : -right_context_size]
             else:
                 states[i]["encoder_states"] = x[0 : ]
 
-        if self.right_context != 0:
+        if right_context_size != 0:
             lengths = (
                 (
-                    ~encoder_padding_mask[:, 0 : -self.right_context]
+                    ~encoder_padding_mask[:, 0 : -right_context_size]
                 )
                 .sum(dim=1, keepdim=True)
                 .long()
@@ -204,7 +206,10 @@ class ImplicitMemoryTransformerEncoderLayer(TransformerEncoderLayer):
         self.max_memory = ceil(self.left_context/self.segment_size) + 1
         self.enable_left_grad = getattr(args, "enable_left_grad", False)
 
-    def update_memory(self, state, output, layer_num):
+    def update_memory(self, state, output, layer_num, right_context_size):
+        if right_context_size != 0:
+            output = output[:-right_context_size]
+            
         if self.share_mem_bank_layers is not None:
           if not any(layer_num in layer for layer in self.share_mem_bank_layers):
             state["memory_banks"].append(output)
@@ -220,13 +225,13 @@ class ImplicitMemoryTransformerEncoderLayer(TransformerEncoderLayer):
 
         return state
 
-    def forward(self, x, state, layer_num, rpe):
+    def forward(self, x, state, layer_num, rpe, right_context_size):
         residual = x
 
         if self.normalize_before:
             x = self.self_attn_layer_norm(x)
 
-        x = self.self_attn(input=x, state=state, layer_num=layer_num, rpe=rpe)
+        x = self.self_attn(input=x, state=state, layer_num=layer_num, rpe=rpe, right_context_size=right_context_size)
 
         x = self.dropout_module(x)
 
@@ -248,9 +253,9 @@ class ImplicitMemoryTransformerEncoderLayer(TransformerEncoderLayer):
             x = self.final_layer_norm(x)
 
         if self.left_context_method == "output" and not self.enable_left_grad:
-            self.update_memory(state, x.detach(), layer_num)
+            self.update_memory(state, x.detach(), layer_num, right_context_size)
         elif self.left_context_method == "output" and self.enable_left_grad:
-            self.update_memory(state, x, layer_num)
+            self.update_memory(state, x, layer_num, right_context_size)
 
         return x
 
@@ -352,7 +357,10 @@ class ImplicitMemoryMultiheadAttention(MultiheadAttention):
             self.rpe_k = None
             self.rpe_v = None
 
-    def update_memory(self, state, output, layer_num):
+    def update_memory(self, state, output, layer_num, right_context_size):
+        if right_context_size != 0:
+            output = output[:-right_context_size]
+            
         if self.share_mem_bank_layers is not None:
           if not any(layer_num in layer for layer in self.share_mem_bank_layers):
             state["memory_banks"].append(output)
@@ -378,7 +386,7 @@ class ImplicitMemoryMultiheadAttention(MultiheadAttention):
             memory_and_input = torch.cat([memory] + [input], dim=0)
         return memory_and_input
 
-    def forward(self, input, state, layer_num, rpe):
+    def forward(self, input, state, layer_num, rpe, right_context_size):
         """
         input: Encoder states of current segment with left or right context,
             plus one summarization query
@@ -463,14 +471,14 @@ class ImplicitMemoryMultiheadAttention(MultiheadAttention):
         output = self.out_proj(attention)
         
         if self.left_context_method == "input" and not self.enable_left_grad:
-            self.update_memory(state, input.detach(), layer_num)
+            self.update_memory(state, input.detach(), layer_num, right_context_size)
         elif self.left_context_method == "input" and self.enable_left_grad:
-            self.update_memory(state, input, layer_num)
+            self.update_memory(state, input, layer_num, right_context_size)
 
         if self.left_context_method == "pre_output" and not self.enable_left_grad:
-            self.update_memory(state, output.detach(), layer_num)
+            self.update_memory(state, output.detach(), layer_num, right_context_size)
         elif self.left_context_method == "pre_output" and self.enable_left_grad:
-            self.update_memory(state, output, layer_num)
+            self.update_memory(state, output, layer_num, right_context_size)
 
         return output
 
@@ -521,17 +529,35 @@ class ImplicitSequenceEncoder(FairseqEncoder):
             lengths=src_lengths,
             segment_size=self.segment_size,
             extra_left_context=0,
-            extra_right_context=self.right_context,
+            extra_right_context=0,
         )
 
         seg_encoder_states_lengths: List[Tuple[Tensor, Tensor]] = []
-
+        cur_seg_count = 0
+        total_seg_count = len(seg_src_tokens_lengths)
         for seg_src_tokens, seg_src_lengths in seg_src_tokens_lengths:
             src_tokens = seg_src_tokens
+            
+            right_context_size = 0
+            #Checks if right context available
+            if self.right_context != 0:
+                #Determines if current segment is not final segment
+                if total_seg_count > cur_seg_count+1:
+                    future_seg_src_tokens, _ = seg_src_tokens_lengths[cur_seg_count+1]
+                    right_context_size = future_seg_src_tokens.size(self.input_time_axis)
+                    #Determines method to apply right context to segment
+                    if right_context_size > self.right_context:
+                        future_seg_src_tokens = future_seg_src_tokens[:,:-(right_context_size-self.right_context)]
+                        right_context_size = future_seg_src_tokens.size(self.input_time_axis)
+                    seg_src_tokens = torch.cat([seg_src_tokens] + [future_seg_src_tokens], dim=self.input_time_axis)
+                    seg_src_lengths = seg_src_lengths + right_context_size
+            
+                cur_seg_count += 1
 
             (seg_encoder_states, seg_enc_lengths, states) = self.module(
             seg_src_tokens,
             seg_src_lengths,
+            right_context_size,
             states=states,
             )
 

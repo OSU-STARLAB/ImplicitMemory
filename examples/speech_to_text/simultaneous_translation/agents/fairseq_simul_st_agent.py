@@ -215,15 +215,6 @@ class FairseqSimulSTAgent(SpeechAgent):
         parser.add_argument("--change-model", default=False, action="store_true",
                             help="Changes the model hyperparameters")
         parser.add_argument(
-            "--variable-left-context-method", choices=["input", "output"], default=None, help="Summarization method"
-        )
-        parser.add_argument(
-            "--shift-right-context", action="store_true", default=False, help="if True, squash memory banks",
-        )
-        parser.add_argument(
-            "--encoder-left-context", action="store_true", default=False, help="if True, squash memory banks",
-        )
-        parser.add_argument(
             "--segment-size", type=int, default=None, help="Length of the segment."
         )
         parser.add_argument(
@@ -233,22 +224,13 @@ class FairseqSimulSTAgent(SpeechAgent):
             "--right-context", type=int, default=None, help="Right context for the segment.",
         )
         parser.add_argument(
-            "--max-memory-size", type=int, default=None, help="Right context for the segment.",
-        )
-        parser.add_argument(
-            "--record-forward-time", action="store_true", default=False, help="if True, squash memory banks",
+            "--max-memory-size", type=int, default=None, help="Memory for the segment.",
         )
         parser.add_argument(
             "--left-context-method",
             default=None,
             choices=["input", "pre_output", "output"],
-            help="Left context strategy for normal left context"
-        )
-        parser.add_argument(
-            "--shift-left-context",
-            action="store_true",
-            default=None,
-            help="if True, squash memory banks",
+            help="Left context strategy"
         )
         
 
@@ -266,20 +248,11 @@ class FairseqSimulSTAgent(SpeechAgent):
             state["cfg"]["model"].right_context = args.right_context
         if args.segment_size is not None:
             state["cfg"]["model"].segment_size = args.segment_size
-        if args.variable_left_context_method is not None:
-            state["cfg"]["model"].variable_left_context_method = args.variable_left_context_method
-        if args.encoder_left_context is not None:
-            state["cfg"]["model"].encoder_left_context = args.encoder_left_context
-        if args.shift_right_context is not None:
-            state["cfg"]["model"].shift_right_context = args.shift_right_context
         if args.max_memory_size is not None:
             state["cfg"]["model"].max_memory_size = args.max_memory_size
-        if args.record_forward_time is not None:
-            state["cfg"]["model"].record_forward_time = args.record_forward_time
         if args.left_context_method is not None:
             state["cfg"]["model"].left_context_method = args.left_context_method
-        if args.shift_left_context is not None:
-            state["cfg"]["model"].shift_left_context = args.shift_left_context
+
         return state
 
     def load_model_vocab(self, args):
