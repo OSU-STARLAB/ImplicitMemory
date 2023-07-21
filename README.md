@@ -1,21 +1,21 @@
 # Implicit Memory Transformer for Computationally Efficient Simultaneous Speech Translation
 
 This repository is a fork of https://github.com/pytorch/fairseq containing the supplementary code used in our ACL 2023 paper Implicit Memory Transformer for Computationally Efficient
-Simultaneous Speech Translation.  Our code is in the `fairseq/models/speech_to_text/modules` folder.
+Simultaneous Speech Translation.  Our code implementation is in `fairseq/models/speech_to_text/modules/implicit_memory_attention.py`.
 
 If you use this code, please consider citing our paper.
 
-The script used to run the ASR pretraining experiments on a single GPU for the ACL 2023 paper is the following:
+The data preparation script for the MuST-C dataset we used in our paper is `examples/speech_to_text/prep_mustc_data.py`.
+
+The script we used to run the ASR pretraining experiments on a single GPU for the ACL 2023 paper is the following:
 
 ```bash
-save_dir=$1
-data_dir=$2
 
-fairseq-train $data_dir \
+fairseq-train ${data_dir} \
     --config-yaml config_asr.yaml --train-subset train_asr --valid-subset dev_asr \
-    --save-dir $save_dir --num-workers 2 --max-tokens 80000 --max-update 100000 \
+    --save-dir ${save_dir} --num-workers 2 --max-tokens 80000 --max-update 100000 \
     --task speech_to_text --criterion label_smoothed_cross_entropy \
-    --arch convtransformer_augmented_memory_XL --optimizer adam --adam-betas [0.9,0.98] --lr 0.0007 --lr-scheduler inverse_sqrt \
+    --arch implicit_memory_transformer --optimizer adam --adam-betas [0.9,0.98] --lr 0.0007 --lr-scheduler inverse_sqrt \
     --simul-type waitk_fixed_pre_decision --criterion label_smoothed_cross_entropy --fixed-pre-decision-ratio 8 --waitk-lagging 1 \
     --warmup-updates 4000 --warmup-init-lr 0.0001 --clip-norm 10.0 --seed 3 --update-freq 4 \
     --ddp-backend legacy_ddp \
@@ -24,17 +24,17 @@ fairseq-train $data_dir \
     --encoder-normalize-before --decoder-normalize-before --enable-left-grad \
     --patience 5 --keep-last-epochs 5 \
 ```
-The script used to run the SimulST pretraining experiments on a single GPU for the ACL 2023 paper is the following:
-```bash
-save_dir=$1
-pre_train_dir=$2
-data_dir=$3
 
-fairseq-train $data_dir \
+In the script, `${data_dir}` refers to the directory of the prepared dataset, and `${save_dir}` refers to the directory to save the model checkpoints.  
+
+Similarly, the script used to run the SimulST pretraining experiments on a single GPU for the ACL 2023 paper is the following:
+
+```bash
+fairseq-train ${data_dir} \
     --task speech_to_text --config-yaml config_st.yaml --train-subset train_st --valid-subset dev_st \
-    --save-dir $save_dir \
-    --load-pretrained-encoder-from $pre_train_dir/checkpoint_average.pt \
-    --arch convtransformer_augmented_memory_XL \
+    --save-dir ${save_dir} \
+    --load-pretrained-encoder-from ${pre_train_dir}/checkpoint_average.pt \
+    --arch implicit_memory_transformer \
     --simul-type waitk_fixed_pre_decision --criterion label_smoothed_cross_entropy --fixed-pre-decision-ratio 8 --waitk-lagging 1 \
     --max-tokens 40000 --num-workers 1 --update-freq 8 \
     --optimizer adam --adam-betas [0.9,0.98] --lr 0.00035 --lr-scheduler inverse_sqrt --warmup-updates 7500 --warmup-init-lr 0.0001 --clip-norm 10.0 \
@@ -45,7 +45,31 @@ fairseq-train $data_dir \
     --patience 10 --keep-last-epochs 10 \
 ```
 
-Below, there is the original README file.
+The checkpoint averaging script we used to average model checkpoints after ASR and SimulST training is `scripts/average_checkpoints.py`. 
+
+The data preparation script we used to prepare our test set is `examples/speech_to_text/seg_mustc_data.py`.  
+
+We performed inference on our Implicit Memory Transformer using SimulEval(https://github.com/facebookresearch/SimulEval) version 1.0.1.
+
+# Citation
+
+```bibtex
+@inproceedings{raffel-chen-2023-implicit,
+    title = "Implicit Memory Transformer for Computationally Efficient Simultaneous Speech Translation",
+    author = "Raffel, Matthew  and
+      Chen, Lizhong",
+    booktitle = "Findings of the Association for Computational Linguistics: ACL 2023",
+    month = jul,
+    year = "2023",
+    address = "Toronto, Canada",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.findings-acl.816",
+    pages = "12900--12907",
+    abstract = "Simultaneous speech translation is an essential communication task difficult for humans whereby a translation is generated concurrently with oncoming speech inputs. For such a streaming task, transformers using block processing to break an input sequence into segments have achieved state-of-the-art performance at a reduced cost. Current methods to allow information to propagate across segments, including left context and memory banks, have faltered as they are both insufficient representations and unnecessarily expensive to compute. In this paper, we propose an Implicit Memory Transformer that implicitly retains memory through a new left context method, removing the need to explicitly represent memory with memory banks. We generate the left context from the attention output of the previous segment and include it in the keys and values of the current segment{'}s attention calculation. Experiments on the MuST-C dataset show that the Implicit Memory Transformer provides a substantial speedup on the encoder forward pass with nearly identical translation quality when compared with the state-of-the-art approach that employs both left context and memory banks.",
+}
+```
+
+Below, is the original README file.
 
 <p align="center">
   <img src="docs/fairseq_logo.png" width="150">
